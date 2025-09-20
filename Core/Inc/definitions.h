@@ -14,7 +14,7 @@
 // ===== System / PWM settings ==============================================================
 #define SYSCLK_HZ   170000000.0f   // System clock [Hz]
 #define PWM_FREQ_HZ 20000.0f       // PWM frequency [Hz] (center-aligned)
-#define DEADTIME_NS 30             // Target dead-time (~200–300 ns)
+#define DEADTIME_NS 10             // Target dead-time (~200–300 ns)
 
 // ARR calculation (center-aligned: f_pwm = f_tim / (2 * (ARR + 1)))
 #define TIM1_ARR ((uint32_t)((SYSCLK_HZ / (2.0f * PWM_FREQ_HZ)) - 1.0f))
@@ -24,7 +24,7 @@
 #define SVPWM_LIMIT_K 0.866f // Voltage limit factor (≈ √3/2)
 
 // ===== Open-loop parameters ==============================================================
-#define OL_UQ_V         6.0f  // Initial q-axis voltage [V] (torque command)
+#define OL_UQ_V         4.0f  // Initial q-axis voltage [V] (torque command)
 #define OL_FREQ_ELEC_HZ 50.0f // Electrical frequency [Hz]
 #define POLE_PAIRS      15    // Motor pole pairs
 
