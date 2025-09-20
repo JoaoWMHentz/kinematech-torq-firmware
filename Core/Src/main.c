@@ -216,9 +216,22 @@ static void MX_GPIO_Init(void) {
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	HAL_GPIO_Init(LED_BLUE_GPIO_Port, &GPIO_InitStruct);
 
-	/* USER CODE BEGIN MX_GPIO_Init_2 */
+        /* USER CODE BEGIN MX_GPIO_Init_2 */
+        // Configure hall sensor inputs (PB6, PB8, PB9)
+        GPIO_InitStruct.Pin = HALL_A_Pin | HALL_B_Pin | HALL_C_Pin;
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(HALL_A_GPIO_Port, &GPIO_InitStruct);
 
-	/* USER CODE END MX_GPIO_Init_2 */
+        // Prepare encoder SDA line (PB7) - left as high-Z until I2C driver initializes
+        GPIO_InitStruct.Pin = ENCODER_SDA_Pin;
+        GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(ENCODER_SDA_GPIO_Port, &GPIO_InitStruct);
+
+        /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
