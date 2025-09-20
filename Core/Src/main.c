@@ -180,6 +180,9 @@ static void MX_TIM1_Init_20kHz(void) {
 
 	HAL_NVIC_SetPriority(TIM1_UP_TIM16_IRQn, 1, 0);
 	HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
+
+	HAL_TIM_MspPostInit(&htim1);
+
 }
 
 /**
