@@ -39,13 +39,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  17 .debug_line   0000d824  00000000  00000000  0003a3c3  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000d550a  00000000  00000000  00047be7  2**0
+ 18 .debug_str    000d550b  00000000  00000000  00047be7  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  0011d0f1  2**0
+ 19 .comment      00000043  00000000  00000000  0011d0f2  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00003e34  00000000  00000000  0011d134  2**2
+ 20 .debug_frame  00003e34  00000000  00000000  0011d138  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 00000075  00000000  00000000  00120f68  2**0
+ 21 .debug_line_str 00000075  00000000  00000000  00120f6c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -373,8 +373,8 @@ int OpenLoopDriver::init(float vbus, float loop_hz) {
  8000418:	f85d 7b04 	ldr.w	r7, [sp], #4
  800041c:	4770      	bx	lr
  800041e:	bf00      	nop
- 8000420:	439d1463 	.word	0x439d1463
- 8000424:	40c00000 	.word	0x40c00000
+ 8000420:	446b9e95 	.word	0x446b9e95
+ 8000424:	41200000 	.word	0x41200000
  8000428:	3f5db22d 	.word	0x3f5db22d
 
 0800042c <_ZN10kinematech14OpenLoopDriver9setLimitsERKNS_9LimitsCfgE>:
@@ -864,7 +864,7 @@ extern "C" void ESC_Main_Init(void) {
  800078e:	681b      	ldr	r3, [r3, #0]
  8000790:	331c      	adds	r3, #28
  8000792:	681b      	ldr	r3, [r3, #0]
- 8000794:	eeb1 0a08 	vmov.f32	s0, #24	@ 0x40c00000  6.0
+ 8000794:	eeb2 0a04 	vmov.f32	s0, #36	@ 0x41200000  10.0
  8000798:	4610      	mov	r0, r2
  800079a:	4798      	blx	r3
 
@@ -1338,7 +1338,7 @@ static void MX_TIM1_Init_20kHz(void) {
 	// deadtime ~250 ns (ajuste conforme driver/MOSFET)
 	// Em G4, escala depende de CKD; use HAL_TIMEx_ConfigBreakDeadTime para montar
 	bd.DeadTime = DEADTIME_NS; // valor aproximado; calibre depois!
- 8000aa0:	231e      	movs	r3, #30
+ 8000aa0:	2305      	movs	r3, #5
  8000aa2:	613b      	str	r3, [r7, #16]
 	bd.BreakState = TIM_BREAK_DISABLE;   // habilite quando ligar a proteção
  8000aa4:	2300      	movs	r3, #0

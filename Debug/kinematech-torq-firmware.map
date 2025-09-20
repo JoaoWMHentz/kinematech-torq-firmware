@@ -4124,23 +4124,23 @@ LOAD /opt/stm32cubeide/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-
  .debug_line    0x0000797a     0x3f1f ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.o
  .debug_line    0x0000b899     0x1f8b ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.o
 
-.debug_str      0x00000000    0xd550a
- .debug_str     0x00000000    0xd550a ./Core/Src/driver/openloop_driver.o
-                              0xd189e (size before relaxing)
- .debug_str     0x000d550a    0xcdc84 ./Core/Src/esc_main.o
- .debug_str     0x000d550a    0xcbac7 ./Core/Src/main.o
- .debug_str     0x000d550a    0xcaf41 ./Core/Src/stm32g4xx_hal_msp.o
- .debug_str     0x000d550a    0xca761 ./Core/Src/stm32g4xx_it.o
- .debug_str     0x000d550a    0xca79d ./Core/Src/system_stm32g4xx.o
- .debug_str     0x000d550a    0xce7eb ./Core/Src/math/svpwm.o
- .debug_str     0x000d550a       0x91 ./Core/Startup/startup_stm32g473cbtx.o
- .debug_str     0x000d550a    0xcb426 ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.o
- .debug_str     0x000d550a    0xcb0e2 ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.o
- .debug_str     0x000d550a    0xca928 ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.o
- .debug_str     0x000d550a    0xcac8b ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.o
- .debug_str     0x000d550a    0xcaebc ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.o
- .debug_str     0x000d550a    0xcbc9b ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.o
- .debug_str     0x000d550a    0xcb90f ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.o
+.debug_str      0x00000000    0xd550b
+ .debug_str     0x00000000    0xd550b ./Core/Src/driver/openloop_driver.o
+                              0xd189f (size before relaxing)
+ .debug_str     0x000d550b    0xcdc85 ./Core/Src/esc_main.o
+ .debug_str     0x000d550b    0xcbac8 ./Core/Src/main.o
+ .debug_str     0x000d550b    0xcaf41 ./Core/Src/stm32g4xx_hal_msp.o
+ .debug_str     0x000d550b    0xca761 ./Core/Src/stm32g4xx_it.o
+ .debug_str     0x000d550b    0xca79d ./Core/Src/system_stm32g4xx.o
+ .debug_str     0x000d550b    0xce7ec ./Core/Src/math/svpwm.o
+ .debug_str     0x000d550b       0x91 ./Core/Startup/startup_stm32g473cbtx.o
+ .debug_str     0x000d550b    0xcb426 ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.o
+ .debug_str     0x000d550b    0xcb0e2 ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.o
+ .debug_str     0x000d550b    0xca928 ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_gpio.o
+ .debug_str     0x000d550b    0xcac8b ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr_ex.o
+ .debug_str     0x000d550b    0xcaebc ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_rcc.o
+ .debug_str     0x000d550b    0xcbc9b ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim.o
+ .debug_str     0x000d550b    0xcb90f ./Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_tim_ex.o
 
 .comment        0x00000000       0x43
  .comment       0x00000000       0x43 ./Core/Src/driver/openloop_driver.o
