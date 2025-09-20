@@ -1,8 +1,11 @@
 /*
  * driver_openloop.hpp
- *
  *  Created on: Sep 20, 2025
  *      Author: joaoh
+ *
+ *  Interface for the open-loop motor driver.
+ *  This driver applies a commanded q-axis voltage (Vq) at a given electrical
+ *  angular velocity, without feedback (no sensor, no closed-loop FOC).
  */
 
 #ifndef INC_DRIVER_DRIVER_OPENLOOP_HPP_
@@ -10,80 +13,87 @@
 
 #pragma once
 #include "driver.hpp"
-#include "math/svpwm.h"
-#include "definitions.h"  // VBUS, SVPWM_LIMIT_K, OL defaults
+#include "definitions.h"
 #include <cstdint>
+
+// HAL includes (provides TIM_HandleTypeDef and timer macros)
+extern "C" {
+#include "stm32g4xx_hal.h"       // adjust to your MCU family: f4xx, h7xx, etc.
+#include "stm32g4xx_hal_tim.h"
+}
 
 namespace kinematech {
 
+/**
+ * @class OpenLoopDriver
+ * @brief Open-loop driver implementation using SVPWM.
+ *
+ * Responsibilities:
+ * - Drive the motor with a fixed electrical frequency and Vq command.
+ * - Convert angle + (Ud=0, Uq) into duty cycles using SVPWM.
+ * - Provide simple setters for electrical speed and q-axis voltage.
+ */
 class OpenLoopDriver final : public Driver {
 public:
-	explicit OpenLoopDriver(TIM_HandleTypeDef *tim) :
-			htim_(tim) {
-	}
+    /**
+     * @brief Construct driver bound to a specific HAL timer instance.
+     * @param tim HAL timer handle used for PWM generation.
+     */
+    explicit OpenLoopDriver(TIM_HandleTypeDef* tim);
 
-	int init(float vbus, float loop_hz) override {
-		vbus_ = vbus;
-		dt_ = 1.0f / loop_hz;
-		period_ = __HAL_TIM_GET_AUTORELOAD(htim_);
-		theta_elec_ = 0.f;
-		w_elec_ = 2.0f * 3.14159265358979323846f * OL_FREQ_ELEC_HZ; // default
-		uq_set_ = OL_UQ_V;
+    /**
+     * @brief Initialize driver with bus voltage and loop frequency.
+     * @param vbus    DC bus voltage [V].
+     * @param loop_hz Control loop frequency [Hz].
+     * @return 0 if successful.
+     */
+    int init(float vbus, float loop_hz) override;
 
-		limits_.voltage_limit = SVPWM_LIMIT_K * vbus_;
-		return 0;
-	}
+    /**
+     * @brief Set operating limits (voltage, velocity caps).
+     */
+    void setLimits(const LimitsCfg& lim) override;
 
-	void setLimits(const LimitsCfg &lim) override {
-		Driver::setLimits(lim);
-		v_limit_cache_ = limits_.voltage_limit;
-	}
+    /**
+     * @brief Set controller configuration.
+     * In open-loop, only Torque/Voltage control is meaningful.
+     */
+    void setController(const ControllerCfg& cc) override;
 
-	void setController(const ControllerCfg &cc) override {
-		Driver::setController(cc);
-		// In open-loop only Torque/Voltage makes sense; others ignored.
-	}
+    /**
+     * @brief Set target command.
+     * In open-loop, interpreted as q-axis voltage (Vq).
+     */
+    void setTarget(float target) override;
 
-	void setTarget(float target) override {
-		Driver::setTarget(target); // interpreted as Vq [V]
-	}
+    /**
+     * @brief Perform one open-loop update step.
+     * - Integrates electrical angle.
+     * - Clamps Vq within limits.
+     * - Calls SVPWM to update PWM duty cycles.
+     */
+    void step() override;
 
-	void step() override {
-		// Integrate electrical angle (open-loop)
-		theta_elec_ += w_elec_ * dt_;
-		if (theta_elec_ > TWO_PI)
-			theta_elec_ -= TWO_PI;
-		if (theta_elec_ < 0.f)
-			theta_elec_ += TWO_PI;
+    /**
+     * @brief Directly set electrical angular speed [rad/s].
+     */
+    void setElectricalSpeed(float w_elec_rad_s);
 
-		const float Ud = 0.f;
-		float Uq = target_;          // target = Vq [V] in open-loop
-		if (Uq < 0.f)
-			Uq = 0.f;
-		if (Uq > v_limit_cache_)
-			Uq = v_limit_cache_;
-
-		svpwm(Ud, Uq, theta_elec_, v_limit_cache_, vbus_, period_, htim_);
-	}
-
-	// Convenience setters similar to SimpleFOC:
-	inline void setElectricalSpeed(float w_elec_rad_s) {
-		w_elec_ = w_elec_rad_s;
-	}
-	inline void setUq(float uq) {
-		uq_set_ = uq;
-		setTarget(uq);
-	}
+    /**
+     * @brief Directly set q-axis voltage [V].
+     * This also updates the target.
+     */
+    void setUq(float uq);
 
 private:
-	TIM_HandleTypeDef *htim_ { nullptr };
-	uint32_t period_ { 0 };
-	float theta_elec_ { 0.f };
-	float w_elec_ { 0.f };
-	float uq_set_ { 0.f };
-	float v_limit_cache_ { 0.f };
+    TIM_HandleTypeDef* htim_ { nullptr }; ///< HAL timer handle (PWM output)
+    uint32_t period_ { 0 };               ///< Timer auto-reload value (PWM period)
+    float theta_elec_ { 0.f };            ///< Electrical angle [rad]
+    float w_elec_ { 0.f };                ///< Electrical angular velocity [rad/s]
+    float uq_set_ { 0.f };                ///< Last set q-axis voltage [V]
+    float v_limit_cache_ { 0.f };         ///< Cached voltage limit [V]
 };
 
-} // namespace torq
+} // namespace kinematech
 
 #endif /* INC_DRIVER_DRIVER_OPENLOOP_HPP_ */

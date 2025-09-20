@@ -38,7 +38,9 @@ CPP_DEPS :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
+Core/Src/driver \
 Core/Src \
+Core/Src/math \
 Core/Startup \
 Drivers/STM32G4xx_HAL_Driver/Src \
 

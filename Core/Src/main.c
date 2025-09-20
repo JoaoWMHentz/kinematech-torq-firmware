@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "esc_api.h"
+#include "definitions.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -49,7 +50,6 @@ TIM_HandleTypeDef htim1;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_TIM1_Init(void);
 static void MX_TIM1_Init_20kHz(void);
 /* USER CODE BEGIN PFP */
 
@@ -172,7 +172,7 @@ static void MX_TIM1_Init_20kHz(void) {
 
 	// deadtime ~250 ns (ajuste conforme driver/MOSFET)
 	// Em G4, escala depende de CKD; use HAL_TIMEx_ConfigBreakDeadTime para montar
-	bd.DeadTime = 50; // valor aproximado; calibre depois!
+	bd.DeadTime = DEADTIME_NS; // valor aproximado; calibre depois!
 	bd.BreakState = TIM_BREAK_DISABLE;   // habilite quando ligar a proteção
 	bd.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
 	bd.AutomaticOutput = TIM_AUTOMATICOUTPUT_ENABLE;
@@ -182,7 +182,6 @@ static void MX_TIM1_Init_20kHz(void) {
 	HAL_NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
 
 	HAL_TIM_MspPostInit(&htim1);
-
 }
 
 /**

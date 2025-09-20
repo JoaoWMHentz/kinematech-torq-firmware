@@ -1,4 +1,6 @@
-Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
+Core/Src/driver/openloop_driver.o: ../Core/Src/driver/openloop_driver.cpp \
+ ../Core/Inc/driver/driver_openloop.hpp ../Core/Inc/driver/driver.hpp \
+ ../Core/Inc/config/ctrl_enum.hpp ../Core/Inc/definitions.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h \
  ../Core/Inc/stm32g4xx_hal_conf.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_rcc.h \
@@ -26,8 +28,11 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h \
- ../Core/Inc/esc_api.h ../Core/Inc/definitions.h
-../Core/Inc/main.h:
+ ../Core/Inc/math/svpwm.h ../Core/Inc/main.h
+../Core/Inc/driver/driver_openloop.hpp:
+../Core/Inc/driver/driver.hpp:
+../Core/Inc/config/ctrl_enum.hpp:
+../Core/Inc/definitions.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h:
 ../Core/Inc/stm32g4xx_hal_conf.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_rcc.h:
@@ -55,5 +60,5 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h:
-../Core/Inc/esc_api.h:
-../Core/Inc/definitions.h:
+../Core/Inc/math/svpwm.h:
+../Core/Inc/main.h:

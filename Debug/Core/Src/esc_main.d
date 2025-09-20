@@ -29,7 +29,7 @@ Core/Src/esc_main.o: ../Core/Src/esc_main.cpp ../Core/Inc/main.h \
  ../Core/Inc/definitions.h ../Core/Inc/motor/motor.hpp \
  ../Core/Inc/sensor/sensor_null.hpp ../Core/Inc/sensor/sensor.hpp \
  ../Core/Inc/driver/driver_openloop.hpp ../Core/Inc/driver/driver.hpp \
- ../Core/Inc/config/ctrl_enum.hpp ../Core/Inc/math/svpwm.h
+ ../Core/Inc/config/ctrl_enum.hpp
 ../Core/Inc/main.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h:
 ../Core/Inc/stm32g4xx_hal_conf.h:
@@ -65,4 +65,3 @@ Core/Src/esc_main.o: ../Core/Src/esc_main.cpp ../Core/Inc/main.h \
 ../Core/Inc/driver/driver_openloop.hpp:
 ../Core/Inc/driver/driver.hpp:
 ../Core/Inc/config/ctrl_enum.hpp:
-../Core/Inc/math/svpwm.h:

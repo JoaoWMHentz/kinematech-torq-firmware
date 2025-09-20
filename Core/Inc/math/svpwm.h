@@ -1,50 +1,50 @@
 /*
  * svpwm.h
- *
  *  Created on: Sep 20, 2025
  *      Author: joaoh
+ *
+ *  Space Vector PWM (SVPWM) API (C interface).
+ *
+ *  Math steps performed by svpwm():
+ *    1) Inverse Park transform (dq -> αβ).
+ *    2) Phase projection (αβ -> abc).
+ *    3) Zero-sequence injection (center).
+ *    4) Clamp to available voltage range [0, v_limit].
+ *    5) Normalize by Vbus and update TIM CCR registers.
  */
 
 #ifndef INC_MATH_SVPWM_H_
 #define INC_MATH_SVPWM_H_
 
-#include <cmath>
-#include "main.h"
-#include "definitions.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-static inline float clampf(float x, float a, float b) {
-	return x < a ? a : (x > b ? b : x);
+#include <stdint.h>
+#include "main.h"        // TIM_HandleTypeDef from CubeMX
+#include "definitions.h" // constants like _SQRT3_2, SVPWM_LIMIT_K, etc.
+
+/**
+ * @brief Clamp float value into [a, b].
+ */
+float clampf(float x, float a, float b);
+
+/**
+ * @brief Compute and apply SVPWM duty cycles to timer channels.
+ *
+ * @param Ud       d-axis voltage [V] (0 in open-loop).
+ * @param Uq       q-axis voltage [V].
+ * @param theta    electrical angle [rad].
+ * @param v_limit  max allowed voltage (after SVPWM scaling).
+ * @param vbus     DC bus voltage [V].
+ * @param period   timer ARR (PWM period in counts).
+ * @param htim     pointer to HAL TIM handle.
+ */
+void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
+           uint32_t period, TIM_HandleTypeDef *htim);
+
+#ifdef __cplusplus
 }
-
-static inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
-		uint32_t period, TIM_HandleTypeDef *htim) {
-	const float s = sinf(theta);
-	const float c = cosf(theta);
-	const float Ualpha = c * Ud - s * Uq;
-	const float Ubeta = s * Ud + c * Uq;
-
-	float Ua = Ualpha;
-	float Ub = -0.5f * Ualpha + _SQRT3_2 * Ubeta;
-	float Uc = -0.5f * Ualpha - _SQRT3_2 * Ubeta;
-
-	const float Umin = fminf(Ua, fminf(Ub, Uc));
-	const float Umax = fmaxf(Ua, fmaxf(Ub, Uc));
-	const float center = -0.5f * (Umax + Umin);
-
-	Ua = clampf(Ua + center, 0.f, v_limit);
-	Ub = clampf(Ub + center, 0.f, v_limit);
-	Uc = clampf(Uc + center, 0.f, v_limit);
-
-	const float da = clampf(Ua / vbus, 0.f, 1.f);
-	const float db = clampf(Ub / vbus, 0.f, 1.f);
-	const float dc = clampf(Uc / vbus, 0.f, 1.f);
-
-	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1,
-			static_cast<uint32_t>(da * period));
-	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_2,
-			static_cast<uint32_t>(db * period));
-	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_3,
-			static_cast<uint32_t>(dc * period));
-}
+#endif
 
 #endif /* INC_MATH_SVPWM_H_ */

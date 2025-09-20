@@ -1,0 +1,2 @@
+../Core/Src/math/svpwm.c:20:7:clampf	24	static
+../Core/Src/math/svpwm.c:24:6:svpwm	96	static
