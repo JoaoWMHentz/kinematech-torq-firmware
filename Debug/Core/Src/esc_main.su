@@ -1,0 +1,3 @@
+../Core/Src/esc_main.c:15:6:ESC_Main_Init	8	static
+../Core/Src/esc_main.c:33:6:ESC_Main_Loop	4	static
+../Core/Src/esc_main.c:40:6:HAL_TIM_PeriodElapsedCallback	16	static
