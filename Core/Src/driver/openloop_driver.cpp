@@ -10,6 +10,8 @@
 #include "driver/driver_openloop.hpp"
 #include "math/svpwm.h"
 #include "definitions.h"
+#include "sensor/sensor.hpp"
+#include "motor/motor.hpp"
 
 extern "C" {
 #include "stm32g4xx_hal.h"
@@ -39,6 +41,12 @@ int OpenLoopDriver::init(float vbus, float loop_hz) {
 
     limits_.voltage_limit = SVPWM_LIMIT_K * vbus_;   // max usable voltage
     v_limit_cache_        = limits_.voltage_limit;
+    if (sensor_) {
+        if (sensor_->init(loop_hz) == 0) {
+            sensor_->update();
+        }
+    }
+
     return 0;
 }
 
@@ -65,6 +73,22 @@ void OpenLoopDriver::setTarget(float target) {
  * - Calls SVPWM to convert (Ud=0, Uq, θ) into duty cycles
  */
 void OpenLoopDriver::step() {
+    if (sensor_) {
+        sensor_->update();
+        if (motor_) {
+            float theta_mech = 0.f;
+            if (sensor_->getAngle(theta_mech) == 0) {
+                motor_->mechanical_angle = theta_mech;
+                motor_->electrical_angle = Motor::elecFromMech(*motor_, theta_mech);
+            }
+
+            float vel_mech = 0.f;
+            if (sensor_->getVelocity(vel_mech) == 0) {
+                motor_->mech_velocity = vel_mech;
+            }
+        }
+    }
+
     // θ(k+1) = θ(k) + ω * Δt
     theta_elec_ += w_elec_ * dt_;
 

@@ -73,6 +73,14 @@ void Error_Handler(void);
 #define PB_HIN_GPIO_Port GPIOA
 #define PC_HIN_Pin GPIO_PIN_10
 #define PC_HIN_GPIO_Port GPIOA
+#define HALL_A_Pin GPIO_PIN_6
+#define HALL_A_GPIO_Port GPIOB
+#define ENCODER_SDA_Pin GPIO_PIN_7
+#define ENCODER_SDA_GPIO_Port GPIOB
+#define HALL_B_Pin GPIO_PIN_8
+#define HALL_B_GPIO_Port GPIOB
+#define HALL_C_Pin GPIO_PIN_9
+#define HALL_C_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

@@ -16,7 +16,8 @@
 #include "definitions.h"
 
 #include "motor/motor.hpp"
-#include "sensor/sensor_null.hpp"
+#include "sensor/hall_sensor.hpp"
+#include "sensor/encoder_i2c.hpp" // stub for future I2C encoder integration
 #include "driver/driver_openloop.hpp"
 #include "driver/driver.hpp"
 
@@ -29,7 +30,11 @@ extern TIM_HandleTypeDef htim1;
 // -----------------------------------------------------------------------------
 // Global singletons (avoid dynamic allocation in the interrupt context)
 static Motor g_motor({ POLE_PAIRS, 0.f, 0.f, 0.f, 0.f });
-static NullSensor g_sensor;
+static HallSensor g_sensor(
+    { HALL_A_GPIO_Port, HALL_A_Pin },
+    { HALL_B_GPIO_Port, HALL_B_Pin },
+    { HALL_C_GPIO_Port, HALL_C_Pin },
+    POLE_PAIRS);
 static OpenLoopDriver g_driver(&htim1);
 
 // Expose pointer for ISR dispatching.
