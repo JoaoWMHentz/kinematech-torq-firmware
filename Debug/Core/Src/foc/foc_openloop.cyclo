@@ -1,4 +1,0 @@
-../Core/Src/foc/foc_openloop.c:12:21:clampf	3
-../Core/Src/foc/foc_openloop.c:14:6:OpenLoopFOC_Init	1
-../Core/Src/foc/foc_openloop.c:24:20:svpwm	1
-../Core/Src/foc/foc_openloop.c:58:6:OpenLoopFOC_Step	2

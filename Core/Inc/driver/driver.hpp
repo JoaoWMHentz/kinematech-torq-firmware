@@ -8,10 +8,13 @@
 #ifndef INC_DRIVER_DRIVER_H_
 #define INC_DRIVER_DRIVER_H_
 
+#pragma once
 #include <cstdint>
-#include "config/ctrl_enum.h"
-#include "motor/motor.h"
-#include "sensor/sensor.h"
+#include "config/ctrl_enum.hpp"
+#include "motor/motor.hpp"
+#include "sensor/sensor.hpp"
+
+namespace kinematech {
 
 class Driver {
 public:
@@ -49,5 +52,7 @@ protected:
   float vbus_{0.f};
   float dt_{0.f};
 };
+
+} // namespace kinematech
 
 #endif /* INC_DRIVER_DRIVER_H_ */
