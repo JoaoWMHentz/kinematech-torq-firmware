@@ -27,25 +27,25 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000030  00000000  00000000  0000606c  2**0
                   CONTENTS, READONLY
- 12 .debug_info   0000c55f  00000000  00000000  0000609c  2**0
+ 12 .debug_info   0000c4f7  00000000  00000000  0000609c  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00001e12  00000000  00000000  000125fb  2**0
+ 13 .debug_abbrev 00001dd0  00000000  00000000  00012593  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00000d20  00000000  00000000  00014410  2**3
+ 14 .debug_aranges 00000d18  00000000  00000000  00014368  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_rnglists 00000a16  00000000  00000000  00015130  2**0
+ 15 .debug_rnglists 00000a0f  00000000  00000000  00015080  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  00022304  00000000  00000000  00015b46  2**0
+ 16 .debug_macro  00022304  00000000  00000000  00015a8f  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0000c7f9  00000000  00000000  00037e4a  2**0
+ 17 .debug_line   0000c715  00000000  00000000  00037d93  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    000d53ee  00000000  00000000  00044643  2**0
+ 18 .debug_str    000d53a6  00000000  00000000  000444a8  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000043  00000000  00000000  00119a31  2**0
+ 19 .comment      00000043  00000000  00000000  0011984e  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00003c90  00000000  00000000  00119a74  2**2
+ 20 .debug_frame  00003c6c  00000000  00000000  00119894  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 21 .debug_line_str 00000075  00000000  00000000  0011d704  2**0
+ 21 .debug_line_str 00000075  00000000  00000000  0011d500  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -278,13 +278,13 @@ public:
  800035a:	f85d 7b04 	ldr.w	r7, [sp], #4
  800035e:	4770      	bx	lr
 
-08000360 <_Z6clampffff>:
+08000360 <_ZL6clampffff>:
 
 #include <cmath>
 #include "main.h"
 #include "definitions.h"
 
-inline float clampf(float x, float a, float b) {
+static inline float clampf(float x, float a, float b) {
  8000360:	b480      	push	{r7}
  8000362:	b085      	sub	sp, #20
  8000364:	af00      	add	r7, sp, #0
@@ -296,16 +296,16 @@ inline float clampf(float x, float a, float b) {
  8000376:	edd7 7a02 	vldr	s15, [r7, #8]
  800037a:	eeb4 7ae7 	vcmpe.f32	s14, s15
  800037e:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
- 8000382:	d501      	bpl.n	8000388 <_Z6clampffff+0x28>
+ 8000382:	d501      	bpl.n	8000388 <_ZL6clampffff+0x28>
  8000384:	68bb      	ldr	r3, [r7, #8]
- 8000386:	e00b      	b.n	80003a0 <_Z6clampffff+0x40>
+ 8000386:	e00b      	b.n	80003a0 <_ZL6clampffff+0x40>
  8000388:	ed97 7a03 	vldr	s14, [r7, #12]
  800038c:	edd7 7a01 	vldr	s15, [r7, #4]
  8000390:	eeb4 7ae7 	vcmpe.f32	s14, s15
  8000394:	eef1 fa10 	vmrs	APSR_nzcv, fpscr
- 8000398:	dd01      	ble.n	800039e <_Z6clampffff+0x3e>
+ 8000398:	dd01      	ble.n	800039e <_ZL6clampffff+0x3e>
  800039a:	687b      	ldr	r3, [r7, #4]
- 800039c:	e000      	b.n	80003a0 <_Z6clampffff+0x40>
+ 800039c:	e000      	b.n	80003a0 <_ZL6clampffff+0x40>
  800039e:	68fb      	ldr	r3, [r7, #12]
  80003a0:	ee07 3a90 	vmov	s15, r3
 }
@@ -316,9 +316,9 @@ inline float clampf(float x, float a, float b) {
  80003b0:	4770      	bx	lr
 	...
 
-080003b4 <_Z5svpwmfffffmP17TIM_HandleTypeDef>:
+080003b4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef>:
 
-inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
+static inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
 		uint32_t period, TIM_HandleTypeDef *htim) {
  80003b4:	b580      	push	{r7, lr}
  80003b6:	b096      	sub	sp, #88	@ 0x58
@@ -365,7 +365,7 @@ inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
  8000432:	eebe 7a00 	vmov.f32	s14, #224	@ 0xbf000000 -0.5
  8000436:	ee27 7a87 	vmul.f32	s14, s15, s14
  800043a:	edd7 7a12 	vldr	s15, [r7, #72]	@ 0x48
- 800043e:	eddf 6a6c 	vldr	s13, [pc, #432]	@ 80005f0 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x23c>
+ 800043e:	eddf 6a6c 	vldr	s13, [pc, #432]	@ 80005f0 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x23c>
  8000442:	ee67 7aa6 	vmul.f32	s15, s15, s13
  8000446:	ee77 7a27 	vadd.f32	s15, s14, s15
  800044a:	edc7 7a10 	vstr	s15, [r7, #64]	@ 0x40
@@ -374,7 +374,7 @@ inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
  8000452:	eebe 7a00 	vmov.f32	s14, #224	@ 0xbf000000 -0.5
  8000456:	ee27 7a87 	vmul.f32	s14, s15, s14
  800045a:	edd7 7a12 	vldr	s15, [r7, #72]	@ 0x48
- 800045e:	eddf 6a64 	vldr	s13, [pc, #400]	@ 80005f0 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x23c>
+ 800045e:	eddf 6a64 	vldr	s13, [pc, #400]	@ 80005f0 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x23c>
  8000462:	ee67 7aa6 	vmul.f32	s15, s15, s13
  8000466:	ee77 7a67 	vsub.f32	s15, s14, s15
  800046a:	edc7 7a0f 	vstr	s15, [r7, #60]	@ 0x3c
@@ -410,27 +410,27 @@ inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
  80004ca:	edd7 7a0c 	vldr	s15, [r7, #48]	@ 0x30
  80004ce:	ee77 7a27 	vadd.f32	s15, s14, s15
  80004d2:	ed97 1a04 	vldr	s2, [r7, #16]
- 80004d6:	eddf 0a47 	vldr	s1, [pc, #284]	@ 80005f4 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x240>
+ 80004d6:	eddf 0a47 	vldr	s1, [pc, #284]	@ 80005f4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x240>
  80004da:	eeb0 0a67 	vmov.f32	s0, s15
- 80004de:	f7ff ff3f 	bl	8000360 <_Z6clampffff>
+ 80004de:	f7ff ff3f 	bl	8000360 <_ZL6clampffff>
  80004e2:	ed87 0a11 	vstr	s0, [r7, #68]	@ 0x44
 	Ub = clampf(Ub + center, 0.f, v_limit);
  80004e6:	ed97 7a10 	vldr	s14, [r7, #64]	@ 0x40
  80004ea:	edd7 7a0c 	vldr	s15, [r7, #48]	@ 0x30
  80004ee:	ee77 7a27 	vadd.f32	s15, s14, s15
  80004f2:	ed97 1a04 	vldr	s2, [r7, #16]
- 80004f6:	eddf 0a3f 	vldr	s1, [pc, #252]	@ 80005f4 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x240>
+ 80004f6:	eddf 0a3f 	vldr	s1, [pc, #252]	@ 80005f4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x240>
  80004fa:	eeb0 0a67 	vmov.f32	s0, s15
- 80004fe:	f7ff ff2f 	bl	8000360 <_Z6clampffff>
+ 80004fe:	f7ff ff2f 	bl	8000360 <_ZL6clampffff>
  8000502:	ed87 0a10 	vstr	s0, [r7, #64]	@ 0x40
 	Uc = clampf(Uc + center, 0.f, v_limit);
  8000506:	ed97 7a0f 	vldr	s14, [r7, #60]	@ 0x3c
  800050a:	edd7 7a0c 	vldr	s15, [r7, #48]	@ 0x30
  800050e:	ee77 7a27 	vadd.f32	s15, s14, s15
  8000512:	ed97 1a04 	vldr	s2, [r7, #16]
- 8000516:	eddf 0a37 	vldr	s1, [pc, #220]	@ 80005f4 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x240>
+ 8000516:	eddf 0a37 	vldr	s1, [pc, #220]	@ 80005f4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x240>
  800051a:	eeb0 0a67 	vmov.f32	s0, s15
- 800051e:	f7ff ff1f 	bl	8000360 <_Z6clampffff>
+ 800051e:	f7ff ff1f 	bl	8000360 <_ZL6clampffff>
  8000522:	ed87 0a0f 	vstr	s0, [r7, #60]	@ 0x3c
 
 	const float da = clampf(Ua / vbus, 0.f, 1.f);
@@ -438,27 +438,27 @@ inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
  800052a:	edd7 7a03 	vldr	s15, [r7, #12]
  800052e:	eec7 6a27 	vdiv.f32	s13, s14, s15
  8000532:	eeb7 1a00 	vmov.f32	s2, #112	@ 0x3f800000  1.0
- 8000536:	eddf 0a2f 	vldr	s1, [pc, #188]	@ 80005f4 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x240>
+ 8000536:	eddf 0a2f 	vldr	s1, [pc, #188]	@ 80005f4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x240>
  800053a:	eeb0 0a66 	vmov.f32	s0, s13
- 800053e:	f7ff ff0f 	bl	8000360 <_Z6clampffff>
+ 800053e:	f7ff ff0f 	bl	8000360 <_ZL6clampffff>
  8000542:	ed87 0a0b 	vstr	s0, [r7, #44]	@ 0x2c
 	const float db = clampf(Ub / vbus, 0.f, 1.f);
  8000546:	ed97 7a10 	vldr	s14, [r7, #64]	@ 0x40
  800054a:	edd7 7a03 	vldr	s15, [r7, #12]
  800054e:	eec7 6a27 	vdiv.f32	s13, s14, s15
  8000552:	eeb7 1a00 	vmov.f32	s2, #112	@ 0x3f800000  1.0
- 8000556:	eddf 0a27 	vldr	s1, [pc, #156]	@ 80005f4 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x240>
+ 8000556:	eddf 0a27 	vldr	s1, [pc, #156]	@ 80005f4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x240>
  800055a:	eeb0 0a66 	vmov.f32	s0, s13
- 800055e:	f7ff feff 	bl	8000360 <_Z6clampffff>
+ 800055e:	f7ff feff 	bl	8000360 <_ZL6clampffff>
  8000562:	ed87 0a0a 	vstr	s0, [r7, #40]	@ 0x28
 	const float dc = clampf(Uc / vbus, 0.f, 1.f);
  8000566:	ed97 7a0f 	vldr	s14, [r7, #60]	@ 0x3c
  800056a:	edd7 7a03 	vldr	s15, [r7, #12]
  800056e:	eec7 6a27 	vdiv.f32	s13, s14, s15
  8000572:	eeb7 1a00 	vmov.f32	s2, #112	@ 0x3f800000  1.0
- 8000576:	eddf 0a1f 	vldr	s1, [pc, #124]	@ 80005f4 <_Z5svpwmfffffmP17TIM_HandleTypeDef+0x240>
+ 8000576:	eddf 0a1f 	vldr	s1, [pc, #124]	@ 80005f4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef+0x240>
  800057a:	eeb0 0a66 	vmov.f32	s0, s13
- 800057e:	f7ff feef 	bl	8000360 <_Z6clampffff>
+ 800057e:	f7ff feef 	bl	8000360 <_ZL6clampffff>
  8000582:	ed87 0a09 	vstr	s0, [r7, #36]	@ 0x24
 
 	__HAL_TIM_SET_COMPARE(htim, TIM_CHANNEL_1,
@@ -844,7 +844,7 @@ public:
  800089c:	eeb0 1a67 	vmov.f32	s2, s15
  80008a0:	edd7 0a03 	vldr	s1, [r7, #12]
  80008a4:	ed9f 0a04 	vldr	s0, [pc, #16]	@ 80008b8 <_ZN10kinematech14OpenLoopDriver4stepEv+0xf0>
- 80008a8:	f7ff fd84 	bl	80003b4 <_Z5svpwmfffffmP17TIM_HandleTypeDef>
+ 80008a8:	f7ff fd84 	bl	80003b4 <_ZL5svpwmfffffmP17TIM_HandleTypeDef>
 	}
  80008ac:	bf00      	nop
  80008ae:	3710      	adds	r7, #16

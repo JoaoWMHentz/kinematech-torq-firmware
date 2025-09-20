@@ -12,11 +12,11 @@
 #include "main.h"
 #include "definitions.h"
 
-inline float clampf(float x, float a, float b) {
+static inline float clampf(float x, float a, float b) {
 	return x < a ? a : (x > b ? b : x);
 }
 
-inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
+static inline void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
 		uint32_t period, TIM_HandleTypeDef *htim) {
 	const float s = sinf(theta);
 	const float c = cosf(theta);

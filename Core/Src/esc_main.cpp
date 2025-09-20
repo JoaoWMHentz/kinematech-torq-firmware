@@ -13,7 +13,9 @@
 #include "driver/driver_openloop.hpp"
 #include "driver/driver.hpp"
 
-extern TIM_HandleTypeDef htim1;
+extern "C" {
+  extern TIM_HandleTypeDef htim1;
+}
 
 // Global singletons (no heap)
 static kinematech::Motor       g_motor({POLE_PAIRS, 0.f, 0.f, 0.f, 0.f});

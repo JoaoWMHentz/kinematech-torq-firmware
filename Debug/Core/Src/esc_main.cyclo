@@ -8,8 +8,8 @@
 ../Core/Inc/driver/driver.hpp:29:16:virtual void kinematech::Driver::setLimits(const kinematech::LimitsCfg&)	1
 ../Core/Inc/driver/driver.hpp:30:16:virtual void kinematech::Driver::setController(const kinematech::ControllerCfg&)	1
 ../Core/Inc/driver/driver.hpp:33:16:virtual void kinematech::Driver::setTarget(float)	1
-../Core/Inc/math/svpwm.h:15:14:float clampf(float, float, float)	3
-../Core/Inc/math/svpwm.h:19:13:void svpwm(float, float, float, float, float, uint32_t, TIM_HandleTypeDef*)	1
+../Core/Inc/math/svpwm.h:15:21:float clampf(float, float, float)	3
+../Core/Inc/math/svpwm.h:19:20:void svpwm(float, float, float, float, float, uint32_t, TIM_HandleTypeDef*)	1
 ../Core/Inc/driver/driver.hpp:19:7:constexpr kinematech::Driver::Driver()	1
 ../Core/Inc/driver/driver.hpp:21:11:kinematech::Driver::~Driver()	1
 ../Core/Inc/driver/driver.hpp:21:11:virtual kinematech::Driver::~Driver()	1
@@ -21,14 +21,14 @@
 ../Core/Inc/driver/driver_openloop.hpp:51:7:virtual void kinematech::OpenLoopDriver::step()	5
 ../Core/Inc/sensor/sensor.hpp:18:11:kinematech::Sensor::~Sensor()	1
 ../Core/Inc/sensor/sensor.hpp:18:11:virtual kinematech::Sensor::~Sensor()	1
-../Core/Src/esc_main.cpp:26:17:void ESC_Main_Init()	1
-../Core/Src/esc_main.cpp:62:17:void ESC_Main_Loop()	1
-../Core/Src/esc_main.cpp:68:17:void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*)	3
+../Core/Src/esc_main.cpp:28:17:void ESC_Main_Init()	1
+../Core/Src/esc_main.cpp:64:17:void ESC_Main_Loop()	1
+../Core/Src/esc_main.cpp:70:17:void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*)	3
 ../Core/Inc/driver/driver_openloop.hpp:19:7:kinematech::OpenLoopDriver::~OpenLoopDriver()	1
 ../Core/Inc/driver/driver_openloop.hpp:19:7:virtual kinematech::OpenLoopDriver::~OpenLoopDriver()	1
 ../Core/Inc/sensor/sensor_null.hpp:17:7:kinematech::NullSensor::~NullSensor()	1
 ../Core/Inc/sensor/sensor_null.hpp:17:7:virtual kinematech::NullSensor::~NullSensor()	1
-../Core/Src/esc_main.cpp:72:1:void __static_initialization_and_destruction_0()	1
-../Core/Src/esc_main.cpp:72:1:void __static_initialization_and_destruction_1()	1
-../Core/Src/esc_main.cpp:72:1:cpp)	1
-../Core/Src/esc_main.cpp:72:1:cpp)	1
+../Core/Src/esc_main.cpp:74:1:void __static_initialization_and_destruction_0()	1
+../Core/Src/esc_main.cpp:74:1:void __static_initialization_and_destruction_1()	1
+../Core/Src/esc_main.cpp:74:1:cpp)	1
+../Core/Src/esc_main.cpp:74:1:cpp)	1
