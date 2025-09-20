@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug STM32 (Cortex-M4)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/Debug/kinematech-torq-firmware.elf",
+            "runToEntryPoint": "main",
+            "preLaunchTask": "Build Firmware",
+            "device": "STM32G473CB",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32g4x.cfg"
+            ],
+            "svdFile": "${workspaceFolder}/Drivers/CMSIS/Device/ST/STM32G4xx/Include/STM32G473.svd"
+        }
+        ,
+        {
+            "name": "Flash STM32 (sem debug)",
+            "type": "cortex-debug",
+            "request": "launch",
+            "servertype": "openocd",
+            "cwd": "${workspaceFolder}",
+            "executable": "${workspaceFolder}/Debug/kinematech-torq-firmware.elf",
+            "preLaunchTask": "Build Firmware",
+            "device": "STM32G473CB",
+            "configFiles": [
+                "interface/stlink.cfg",
+                "target/stm32g4x.cfg"
+            ],
+            "runToMain": false,
+            "request": "launch",
+            "noDebug": true
+        }
+    ]
+}

@@ -38,7 +38,6 @@ Release/
 *.opensdf
 *.VC.db
 *.VC.opendb
-*.vscode/
 # STM32CubeMX generated files
 # CMake generated files
 CMakeFiles/
