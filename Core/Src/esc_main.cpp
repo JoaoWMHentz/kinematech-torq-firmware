@@ -15,6 +15,8 @@
 #include "main.h"
 #include "definitions.h"
 
+#include <cstdio>
+
 #include "motor/motor.hpp"
 #include "sensor/hall_sensor.hpp"
 #include "sensor/encoder_i2c.hpp" // stub for future I2C encoder integration
@@ -25,6 +27,11 @@ namespace kinematech {
 
 extern "C" {
 extern TIM_HandleTypeDef htim1;
+}
+
+namespace {
+constexpr uint32_t kHallPrintPeriodMs = 100U; // 10 Hz update rate
+constexpr float kRadToMillirad = 1000.0f;
 }
 
 // -----------------------------------------------------------------------------
@@ -96,6 +103,41 @@ extern "C" void ESC_Main_Loop(void) {
      * Background hook.
      * Update targets, poll communication, etc. (currently empty).
      * --------------------------------------------------------------- */
+    static uint32_t last_print_ms = 0U;
+    const uint32_t now_ms = HAL_GetTick();
+    if ((now_ms - last_print_ms) >= kHallPrintPeriodMs) {
+        last_print_ms = now_ms;
+
+        float theta_mech = 0.f;
+        const int angle_status = g_sensor.getAngle(theta_mech);
+        if (angle_status != 0) {
+            theta_mech = 0.f;
+        }
+
+        float vel_mech = 0.f;
+        const int velocity_status = g_sensor.getVelocity(vel_mech);
+        if (velocity_status != 0) {
+            vel_mech = 0.f;
+        }
+
+        const uint8_t raw = g_sensor.rawState();
+        const int sector = g_sensor.lastSector();
+        const float theta_abs = g_sensor.absoluteAngle();
+
+        const long theta_mrad = static_cast<long>(theta_mech * kRadToMillirad);
+        const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
+        const long vel_mrad_s = static_cast<long>(vel_mech * kRadToMillirad);
+
+        std::printf(
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s status=(%d,%d)\r\n",
+            static_cast<unsigned int>(raw),
+            sector,
+            theta_mrad,
+            theta_abs_mrad,
+            vel_mrad_s,
+            angle_status,
+            velocity_status);
+    }
 }
 
 // HAL ISR glue (C linkage)

@@ -30,6 +30,8 @@
 #include <sys/time.h>
 #include <sys/times.h>
 
+#include "stm32g4xx.h"
+
 
 /* Variables */
 extern int __io_putchar(int ch) __attribute__((weak));
@@ -87,6 +89,12 @@ __attribute__((weak)) int _write(int file, char *ptr, int len)
     __io_putchar(*ptr++);
   }
   return len;
+}
+
+int __io_putchar(int ch)
+{
+  ITM_SendChar((uint32_t)ch);
+  return ch;
 }
 
 int _close(int file)
