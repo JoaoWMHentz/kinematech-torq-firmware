@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "esc_api.h"
 #include "definitions.h"
+#include "usb_device.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -73,6 +74,7 @@ int main(void) {
 	SystemClock_Config();
 	MX_GPIO_Init();
 	MX_TIM1_Init_20kHz();
+	MX_USB_Device_Init();
 
 	HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 

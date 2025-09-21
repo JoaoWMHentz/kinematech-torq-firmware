@@ -31,11 +31,14 @@
 #include <sys/times.h>
 
 #include "stm32g4xx.h"
+#include "usbd_cdc_if.h"
 
 
 /* Variables */
 extern int __io_putchar(int ch) __attribute__((weak));
 extern int __io_getchar(void) __attribute__((weak));
+
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 
 char *__env[1] = { 0 };
@@ -91,8 +94,54 @@ __attribute__((weak)) int _write(int file, char *ptr, int len)
   return len;
 }
 
+static void USB_CDC_FlushBuffer(uint8_t *buf, uint16_t len)
+{
+  if ((len == 0U) || (hUsbDeviceFS.pClassData == NULL))
+  {
+    return;
+  }
+
+  uint8_t result;
+  do
+  {
+    result = CDC_Transmit_FS(buf, len);
+    if (result == USBD_FAIL)
+    {
+      return;
+    }
+  } while (result == USBD_BUSY);
+
+  if (result != USBD_OK)
+  {
+    return;
+  }
+
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
+  while (hcdc != NULL && hcdc->TxState != 0U)
+  {
+    hcdc = (USBD_CDC_HandleTypeDef *)hUsbDeviceFS.pClassData;
+  }
+}
+
 int __io_putchar(int ch)
 {
+  static uint8_t usb_tx_buffer[128];
+  static uint16_t usb_tx_len = 0U;
+
+  if (usb_tx_len == (uint16_t)sizeof(usb_tx_buffer))
+  {
+    USB_CDC_FlushBuffer(usb_tx_buffer, usb_tx_len);
+    usb_tx_len = 0U;
+  }
+
+  usb_tx_buffer[usb_tx_len++] = (uint8_t)ch;
+
+  if (ch == '\n' || usb_tx_len == (uint16_t)sizeof(usb_tx_buffer))
+  {
+    USB_CDC_FlushBuffer(usb_tx_buffer, usb_tx_len);
+    usb_tx_len = 0U;
+  }
+
   ITM_SendChar((uint32_t)ch);
   return ch;
 }
