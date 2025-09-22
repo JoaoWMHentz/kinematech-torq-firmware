@@ -73,10 +73,24 @@ public:
      */
     inline float absoluteAngle() const { return mechanical_angle_unwrapped_; }
 
+    // Accessor for ISR dispatch (singleton-style binding)
+    static HallSensor* instance();
+ 
 private:
+    void onTimerEdgeIsr(uint32_t capture_ticks);
+
     uint8_t readState() const;
     static float nowSeconds();
     static float wrapAngle(float angle);
+
+    // Single-instance pointer for ISR dispatching
+    static HallSensor* s_instance_;
+
+    // Allow HAL capture callback to drive private ISR entrypoint
+    friend void ::HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef* htim);
+
+    // Bound HAL timer handle (TIM8 Hall interface)
+    TIM_HandleTypeDef* tim_ { nullptr };
 
     Pin pins_[3];
     uint8_t pole_pairs_ { 0u };
@@ -91,6 +105,10 @@ private:
     float mech_velocity_ { 0.f };
     float last_transition_time_s_ { 0.f };
     float stale_timeout_s_ { 0.0f };
+
+    // Timer-based timing info
+    uint32_t last_capture_ticks_ { 0u };
+    float tick_period_s_ { 0.f }; // seconds per timer tick
 };
 
 } // namespace kinematech
