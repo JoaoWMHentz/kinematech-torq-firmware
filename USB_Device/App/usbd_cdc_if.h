@@ -31,6 +31,7 @@
 #include "usbd_cdc.h"
 
 /* USER CODE BEGIN INCLUDE */
+#include <stdbool.h>
 
 /* USER CODE END INCLUDE */
 
@@ -109,6 +110,10 @@ extern USBD_CDC_ItfTypeDef USBD_Interface_fops_FS;
 uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len);
 
 /* USER CODE BEGIN EXPORTED_FUNCTIONS */
+uint32_t CDC_BytesAvailable_FS(void);
+uint32_t CDC_Read_FS(uint8_t *Buf, uint32_t Len);
+bool CDC_RxOverflowed_FS(void);
+void CDC_ClearRxOverflow_FS(void);
 
 /* USER CODE END EXPORTED_FUNCTIONS */
 

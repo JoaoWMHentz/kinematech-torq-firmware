@@ -4,3 +4,4 @@ build/
 Debug/
 Release/
 .VSCodeCounter/
+.vscode

@@ -27,6 +27,8 @@
 /* USER CODE BEGIN Includes */
 #include "esc_api.h"
 #include "definitions.h"
+#include "usbd_cdc_if.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -58,6 +60,23 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+static void ProcessUsbCdcRx(void)
+{
+  uint8_t rx_buffer[64];
+  const uint32_t pending = CDC_Read_FS(rx_buffer, sizeof(rx_buffer) - 1U);
+
+  if (pending > 0U)
+  {
+    rx_buffer[pending] = '\0';
+    printf("USB RX (%lu bytes): %s\r\n", (unsigned long)pending, rx_buffer);
+  }
+
+  if (CDC_RxOverflowed_FS())
+  {
+    CDC_ClearRxOverflow_FS();
+    printf("USB RX overflow: host sent data faster than firmware consumed\r\n");
+  }
+}
 
 /* USER CODE END 0 */
 
@@ -98,6 +117,10 @@ int main(void)
   HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 
   ESC_Main_Init();
+
+  /* Give the host time to enumerate before printing. */
+  HAL_Delay(200U);
+  printf("USB CDC interface ready\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,6 +131,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	   ESC_Main_Loop();
+	   ProcessUsbCdcRx();
 	   __WFI();
   }
   /* USER CODE END 3 */
