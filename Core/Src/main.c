@@ -25,7 +25,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "esc_api.h"
+#include "definitions.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -94,7 +95,9 @@ int main(void)
   MX_TIM8_Init();
   MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
+  HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 
+  ESC_Main_Init();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -104,6 +107,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	   ESC_Main_Loop();
+	   __WFI();
   }
   /* USER CODE END 3 */
 }
