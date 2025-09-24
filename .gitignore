@@ -1,6 +1,0 @@
-# STM32CubeIDE + CMake + C/C++ project .gitignore
-# Build and IDE folders
-build/
-Debug/
-Release/
-.VSCodeCounter/
