@@ -4,8 +4,10 @@
  *      Author: joaoh
  *
  *  High-level ESC application wiring. This module glues together the
- *  hardware timer, motor description, sensor, and open-loop driver.
- *  The flow mirrors the structure used in svpwm.c/openloop_driver.cpp:
+ *  hardware timer, motor description, hall sensor, and the closed-loop
+ *  FOC driver. The flow mirrors the structure used previously by the
+ *  open-loop driver but now routes all torque commands through the FOC
+ *  controller:
  *   1) Instantiate global singletons (no heap usage).
  *   2) Start PWM outputs and complementary channels.
  *   3) Configure driver limits + controller and set an initial target.
@@ -20,7 +22,7 @@
 #include "motor/motor.hpp"
 #include "sensor/hall_sensor.hpp"
 #include "sensor/encoder_i2c.hpp" // stub for future I2C encoder integration
-#include "driver/driver_openloop.hpp"
+#include "driver/driver_closedloop.hpp"
 #include "driver/driver.hpp"
 
 namespace kinematech {
@@ -42,7 +44,7 @@ static HallSensor g_sensor(
     { HALL_B_GPIO_Port, HALL_B_Pin },
     { HALL_C_GPIO_Port, HALL_C_Pin },
     POLE_PAIRS);
-static OpenLoopDriver g_driver(&htim1);
+static ClosedLoopDriver g_driver(&htim1);
 
 // Expose pointer for ISR dispatching.
 static Driver* g_drv_ptr = &g_driver;
@@ -78,8 +80,8 @@ extern "C" void ESC_Main_Init(void) {
      * --------------------------------------------------------------- */
     LimitsCfg lim {};
     lim.voltage_limit = SVPWM_LIMIT_K * VBUS_V;
-    lim.current_limit = 0.f;
-    lim.velocity_limit = 0.f;
+    lim.current_limit = 15.0f;
+    lim.velocity_limit = 200.0f;
     g_drv_ptr->setLimits(lim);
 
     ControllerCfg cc {};
@@ -87,12 +89,25 @@ extern "C" void ESC_Main_Init(void) {
     cc.torque_ctrl = TorqueControlType::Voltage;
     g_drv_ptr->setController(cc);
 
+    if (auto* foc_drv = static_cast<ClosedLoopDriver*>(g_drv_ptr)) {
+        // SimpleFOC-like defaults for cascaded PI loops
+        ClosedLoopDriver::PIConfig vel_cfg { 0.4f, 20.0f, lim.voltage_limit };
+        foc_drv->setVelocityGains(vel_cfg);
+
+        ClosedLoopDriver::PIConfig pos_cfg { 8.0f, 0.0f, lim.velocity_limit };
+        foc_drv->setPositionGains(pos_cfg);
+
+        ClosedLoopDriver::PIConfig cur_cfg { 2.0f, 50.0f, lim.voltage_limit };
+        foc_drv->setCurrentGains(cur_cfg);
+        foc_drv->setVelocityFilterCutoff(150.0f);
+    }
+
     /* ---------------------------------------------------------------
      * 5) Prime driver state and enable PWM interrupt
-     * - Set initial Vq target for open-loop drive.
+     * - Zero torque request on boot to keep the motor idle.
      * - Enable TIM1 update interrupt so the driver::step runs each cycle.
      * --------------------------------------------------------------- */
-    g_drv_ptr->setTarget(OL_UQ_V);
+    g_drv_ptr->setTarget(0.0f);
 
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
@@ -128,13 +143,19 @@ extern "C" void ESC_Main_Loop(void) {
         const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
         const long vel_mrad_s = static_cast<long>(vel_mech * kRadToMillirad);
 
+        long uq_millivolt = 0;
+        if (auto* foc_drv = static_cast<ClosedLoopDriver*>(g_drv_ptr)) {
+            uq_millivolt = static_cast<long>(foc_drv->qVoltage() * 1000.0f);
+        }
+
         std::printf(
-            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s status=(%d,%d)\r\n",
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s uq=%ld mV status=(%d,%d)\r\n",
             static_cast<unsigned int>(raw),
             sector,
             theta_mrad,
             theta_abs_mrad,
             vel_mrad_s,
+            uq_millivolt,
             angle_status,
             velocity_status);
     }

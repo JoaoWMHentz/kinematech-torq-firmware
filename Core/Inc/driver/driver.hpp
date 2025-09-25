@@ -78,6 +78,11 @@ public:
     }
 
     /**
+     * @brief Feed latest phase current samples [A].
+     */
+    virtual void feedPhaseCurrents(float, float, float) {}
+
+    /**
      * @brief Perform one control update.
      *
      * Called from the PWM interrupt (or main loop) at loop_hz rate.
