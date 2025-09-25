@@ -1,3 +1,4 @@
+
 /*
  * driver_closedloop.hpp
  *  Created on: Nov 7, 2025
@@ -21,28 +22,70 @@ extern "C" {
 
 namespace kinematech {
 
+/**
+ * @class ClosedLoopDriver
+ * @brief Field-oriented control (FOC) strategy that mirrors SimpleFOC.
+ *
+ * The driver runs cascaded PI loops (position → velocity → torque/current)
+ * on top of hall/encoder feedback, ultimately producing SVPWM voltages that
+ * are written to the TIM1 bridge timer.
+ */
 class ClosedLoopDriver final : public Driver {
 public:
+    /**
+     * @brief SimpleFOC-style PI configuration (gain + clamp).
+     */
     struct PIConfig {
-        float kp { 0.f };
-        float ki { 0.f };
-        float limit { 0.f };
+        float kp { 0.f };    ///< Proportional gain
+        float ki { 0.f };    ///< Integral gain
+        float limit { 0.f }; ///< Absolute output limit
     };
 
+    /**
+     * @brief Phase current samples expressed in the abc frame.
+     */
     struct PhaseCurrents {
-        float ia { 0.f };
-        float ib { 0.f };
-        float ic { 0.f };
+        float ia { 0.f };    ///< Phase A current [A]
+        float ib { 0.f };    ///< Phase B current [A]
+        float ic { 0.f };    ///< Phase C current [A]
     };
 
+    /**
+     * @brief Construct the driver bound to a PWM timer handle.
+     */
     explicit ClosedLoopDriver(TIM_HandleTypeDef* tim);
 
+    /**
+     * @brief Prepare timers/sensors and seed the cascaded loops.
+     *
+     * @param vbus    DC bus voltage [V].
+     * @param loop_hz Control loop frequency (PWM rate) [Hz].
+     */
     int init(float vbus, float loop_hz) override;
+
+    /**
+     * @brief Propagate updated operating limits into the loops.
+     */
     void setLimits(const LimitsCfg& lim) override;
+
+    /**
+     * @brief Store controller selection (torque/velocity/position).
+     */
     void setController(const ControllerCfg& cc) override;
+
+    /**
+     * @brief Update the user target (torque, speed or angle depending on mode).
+     */
     void setTarget(float target) override;
+
+    /**
+     * @brief Execute one closed-loop FOC iteration (sensor → PI → SVPWM).
+     */
     void step() override;
 
+    /**
+     * @brief Runtime tuning helpers mirroring SimpleFOC setters.
+     */
     void setVelocityGains(const PIConfig& cfg);
     void setPositionGains(const PIConfig& cfg);
     void setCurrentGains(const PIConfig& cfg);
@@ -50,9 +93,16 @@ public:
     void setSensorDirection(int8_t dir);
     void setElectricalZero(float offset_rad);
 
+    /**
+     * @brief Feed latest phase current samples (abc).
+     */
     void feedPhaseCurrents(const PhaseCurrents& iabc);
+
     void feedPhaseCurrents(float ia, float ib, float ic) override;
 
+    /**
+     * @brief Accessors for diagnostics.
+     */
     float electricalAngle() const;
     float shaftAngle() const;
     float shaftVelocity() const;
@@ -74,6 +124,7 @@ private:
         float q { 0.f };
     };
 
+    // --- Internal helpers ---------------------------------------------------
     void sampleSensor();
     float unwrapAngle(float raw_angle);
     float wrapAngle(float angle) const;
@@ -86,9 +137,11 @@ private:
     void applyFOC(float uq_cmd);
     void updateCurrentDQ(const PhaseCurrents& iabc);
 
+    // --- Cached hardware references ----------------------------------------
     TIM_HandleTypeDef* htim_ { nullptr };
     uint32_t period_ { 0u };
 
+    // --- Sensor state -------------------------------------------------------
     float theta_mech_raw_ { 0.f };
     float theta_mech_prev_raw_ { 0.f };
     float theta_mech_unwrapped_ { 0.f };
@@ -98,10 +151,12 @@ private:
     float zero_elec_offset_ { 0.f };
     int8_t sensor_dir_ { 1 };
 
+    // --- Velocity estimation ------------------------------------------------
     float velocity_meas_ { 0.f };
     float velocity_filtered_ { 0.f };
     float velocity_filter_alpha_ { 0.2f };
 
+    // --- Control loop state -------------------------------------------------
     float torque_target_ { 0.f };
     float iq_target_ { 0.f };
 

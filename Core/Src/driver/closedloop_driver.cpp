@@ -1,7 +1,12 @@
+
 /*
  * closedloop_driver.cpp
  *  Created on: Nov 7, 2025
  *      Author: Firmware Team
+ *
+ *  Closed-loop field-oriented controller inspired by SimpleFOC. Implements the
+ *  typical cascaded PI structure (position → velocity → torque) and produces
+ *  SVPWM duty cycles that are applied to TIM1.
  */
 
 #include "driver/driver_closedloop.hpp"
@@ -15,18 +20,19 @@
 
 namespace kinematech {
 namespace {
-constexpr float kTwoOverThree = 0.6666666667f;
-constexpr float kOneOverSqrt3 = 0.5773502692f;
-}
+constexpr float kTwoOverThree = 0.6666666667f;   // 2/3, Park/Clarke scaling
+constexpr float kOneOverSqrt3 = 0.5773502692f;   // 1/√3, alpha-beta scaling
+} // namespace
 
 ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
     : htim_(tim) {}
 
 int ClosedLoopDriver::init(float vbus, float loop_hz) {
     if (loop_hz <= 0.f || !htim_) {
-        return -1;
+        return -1; // invalid initialization parameters
     }
 
+    // Cache bus voltage and loop period (executed at PWM rate).
     vbus_ = vbus;
     dt_ = 1.0f / loop_hz;
 
@@ -36,6 +42,7 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
     period_ = (htim_ ? htim_->Init.Period : 0u);
 #endif
 
+    // Reset controllers/state so previous runs do not leak.
     velocity_pi_.reset();
     position_pi_.reset();
     current_pi_.reset();
@@ -53,6 +60,7 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
         position_pi_.limit = default_vel_limit;
     }
 
+    // Provide SimpleFOC-like default gains if user has not tuned them yet.
     if (velocity_pi_.kp == 0.f && velocity_pi_.ki == 0.f) {
         velocity_pi_.kp = 0.3f;
         velocity_pi_.ki = 10.0f;
@@ -66,7 +74,7 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
         current_pi_.ki = 0.0f;
     }
 
-    setVelocityFilterCutoff(200.0f);
+    setVelocityFilterCutoff(200.0f); // light smoothing for hall velocity
 
     theta_mech_prev_raw_ = 0.f;
     theta_mech_prev_unwrapped_ = 0.f;
@@ -83,6 +91,7 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
     current_meas_ = {};
     current_valid_ = false;
 
+    // Seed sensor state so the first control step starts with a valid angle.
     if (sensor_) {
         if (sensor_->init(loop_hz) == 0) {
             sensor_->update();
@@ -111,6 +120,7 @@ void ClosedLoopDriver::setController(const ControllerCfg& cc) {
 void ClosedLoopDriver::setTarget(float target) {
     last_target_ = target;
 
+    // Clamp user target according to active control mode and limits.
     if (ctrl_.motion_ctrl == MotionControlType::Torque &&
         ctrl_.torque_ctrl == TorqueControlType::Voltage && v_limit_cache_ > 0.f) {
         last_target_ = clamp(last_target_, -v_limit_cache_, v_limit_cache_);
@@ -153,7 +163,7 @@ void ClosedLoopDriver::setCurrentGains(const PIConfig& cfg) {
 
 void ClosedLoopDriver::setVelocityFilterCutoff(float cutoff_hz) {
     if (cutoff_hz <= 0.f || dt_ <= 0.f) {
-        velocity_filter_alpha_ = 1.0f;
+        velocity_filter_alpha_ = 1.0f; // instantaneous update (no filtering)
         return;
     }
     const float tau = 1.0f / (2.0f * static_cast<float>(M_PI) * cutoff_hz);
@@ -223,12 +233,14 @@ void ClosedLoopDriver::sampleSensor() {
 
     sensor_->update();
 
+    // Capture mechanical angle and unwrap it so the controller stays continuous.
     float theta = theta_mech_raw_;
     if (sensor_->getAngle(theta) == 0) {
         theta_mech_raw_ = theta;
         theta_mech_unwrapped_ = unwrapAngle(theta);
     }
 
+    // Prefer sensor-provided velocity; fall back to finite difference.
     float vel = 0.f;
     bool vel_ok = (sensor_->getVelocity(vel) == 0);
     if (!vel_ok && sensor_ready_) {
@@ -247,6 +259,7 @@ void ClosedLoopDriver::sampleSensor() {
         motor_->mech_velocity = velocity_filtered_;
     }
 
+    // Convert mechanical angle into electrical and store it for SVPWM.
     if (motor_) {
         const float elec = static_cast<float>(sensor_dir_) * Motor::elecFromMech(*motor_, theta_mech_unwrapped_) + zero_elec_offset_;
         theta_elec_ = wrapAngle(elec);
@@ -354,7 +367,7 @@ float ClosedLoopDriver::torqueLoop(float torque_target) {
 }
 
 void ClosedLoopDriver::applyFOC(float uq_cmd) {
-    (void)uq_cmd;
+    (void)uq_cmd; // command already stored in voltage_cmd_
     if (!htim_ || period_ == 0u) {
         return;
     }
@@ -371,9 +384,11 @@ void ClosedLoopDriver::applyFOC(float uq_cmd) {
 }
 
 void ClosedLoopDriver::updateCurrentDQ(const PhaseCurrents& iabc) {
+    // Clarke transform: convert three-phase currents into alpha/beta frame.
     const float i_alpha = kTwoOverThree * (iabc.ia - 0.5f * (iabc.ib + iabc.ic));
     const float i_beta = kTwoOverThree * kOneOverSqrt3 * (iabc.ib - iabc.ic);
 
+    // Park transform: rotate alpha/beta into dq aligned with electrical angle.
     const float s = std::sinf(theta_elec_);
     const float c = std::cosf(theta_elec_);
 
