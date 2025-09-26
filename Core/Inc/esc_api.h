@@ -11,6 +11,7 @@
 #ifndef INC_ESC_API_H_
 #define INC_ESC_API_H_
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -20,6 +21,15 @@ void ESC_Main_Init(void);
 
 /// Background application loop (invoked from the super-loop).
 void ESC_Main_Loop(void);
+
+/// Set torque target (interpreted as Vq or Iq depending on torque mode).
+void ESC_SetTorqueTarget(float torque_cmd);
+
+/// Set velocity target (rad/s) and enable velocity mode.
+void ESC_SetVelocityTarget(float velocity_rad_s);
+
+/// Set angle target (rad) and enable position mode.
+void ESC_SetAngleTarget(float angle_rad);
 
 #ifdef __cplusplus
 }

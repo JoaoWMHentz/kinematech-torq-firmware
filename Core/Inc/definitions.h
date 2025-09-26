@@ -20,11 +20,11 @@
 #define TIM1_ARR ((uint32_t)((SYSCLK_HZ / (2.0f * PWM_FREQ_HZ)) - 1.0f))
 
 // ===== DC bus / SVPWM settings ===========================================================
-#define VBUS_V        31.0f  // DC bus voltage [V] (adjust to match hardware)
+#define VBUS_V        20.0f  // DC bus voltage [V] (adjust to match hardware)
 #define SVPWM_LIMIT_K 0.866f // Voltage limit factor (≈ √3/2)
 
 // ===== Open-loop parameters ==============================================================
-#define OL_UQ_V         4.0f  // Initial q-axis voltage [V] (torque command)
+#define OL_UQ_V         1.0f  // Initial q-axis voltage [V] (torque command)
 #define OL_FREQ_ELEC_HZ 50.0f // Electrical frequency [Hz]
 #define POLE_PAIRS      15    // Motor pole pairs
 

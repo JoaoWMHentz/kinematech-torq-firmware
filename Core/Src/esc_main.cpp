@@ -16,6 +16,7 @@
 
 #include "main.h"
 #include "definitions.h"
+#include "esc_api.h"
 
 #include <cstdio>
 
@@ -49,6 +50,22 @@ static ClosedLoopDriver g_driver(&htim1);
 // Expose pointer for ISR dispatching.
 static Driver* g_drv_ptr = &g_driver;
 
+static void SetMotionControl(MotionControlType motion) {
+    if (!g_drv_ptr) {
+        return;
+    }
+    auto cfg = g_drv_ptr->ctrl();
+    cfg.motion_ctrl = motion;
+    g_drv_ptr->setController(cfg);
+}
+
+static void SetMotionTarget(MotionControlType motion, float target) {
+    SetMotionControl(motion);
+    if (g_drv_ptr) {
+        g_drv_ptr->setTarget(target);
+    }
+}
+
 extern "C" void ESC_Main_Init(void) {
     /* ---------------------------------------------------------------
      * 1) Start PWM outputs (including low-side complements)
@@ -80,24 +97,24 @@ extern "C" void ESC_Main_Init(void) {
      * --------------------------------------------------------------- */
     LimitsCfg lim {};
     lim.voltage_limit = SVPWM_LIMIT_K * VBUS_V;
-    lim.current_limit = 15.0f;
+    lim.current_limit = 0.5f;
     lim.velocity_limit = 200.0f;
     g_drv_ptr->setLimits(lim);
 
     ControllerCfg cc {};
-    cc.motion_ctrl = MotionControlType::Torque;
+    cc.motion_ctrl = MotionControlType::Velocity;
     cc.torque_ctrl = TorqueControlType::Voltage;
     g_drv_ptr->setController(cc);
 
     if (auto* foc_drv = static_cast<ClosedLoopDriver*>(g_drv_ptr)) {
         // SimpleFOC-like defaults for cascaded PI loops
-        ClosedLoopDriver::PIConfig vel_cfg { 0.4f, 20.0f, lim.voltage_limit };
+        ClosedLoopDriver::PIConfig vel_cfg { 1.0f, 0.0f, lim.voltage_limit };
         foc_drv->setVelocityGains(vel_cfg);
 
-        ClosedLoopDriver::PIConfig pos_cfg { 8.0f, 0.0f, lim.velocity_limit };
+        ClosedLoopDriver::PIConfig pos_cfg { 1.0f, 0.0f, lim.velocity_limit };
         foc_drv->setPositionGains(pos_cfg);
 
-        ClosedLoopDriver::PIConfig cur_cfg { 2.0f, 50.0f, lim.voltage_limit };
+        ClosedLoopDriver::PIConfig cur_cfg { 1.0f, 0.0f, lim.voltage_limit };
         foc_drv->setCurrentGains(cur_cfg);
         foc_drv->setVelocityFilterCutoff(150.0f);
     }
@@ -107,10 +124,10 @@ extern "C" void ESC_Main_Init(void) {
      * - Zero torque request on boot to keep the motor idle.
      * - Enable TIM1 update interrupt so the driver::step runs each cycle.
      * --------------------------------------------------------------- */
-    g_drv_ptr->setTarget(0.0f);
-
+    ESC_SetVelocityTarget(0.0f);
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+	ESC_SetVelocityTarget(1.0f);
 }
 
 extern "C" void ESC_Main_Loop(void) {
@@ -118,9 +135,12 @@ extern "C" void ESC_Main_Loop(void) {
      * Background hook.
      * Update targets, poll communication, etc. (currently empty).
      * --------------------------------------------------------------- */
+
+// simple test command
     static uint32_t last_print_ms = 0U;
     const uint32_t now_ms = HAL_GetTick();
-    if ((now_ms - last_print_ms) >= kHallPrintPeriodMs) {
+    if ((now_ms - last_print_ms) >= kHallPrintPeriodMs && true) {
+		//
         last_print_ms = now_ms;
 
         float theta_mech = 0.f;
@@ -131,9 +151,6 @@ extern "C" void ESC_Main_Loop(void) {
 
         float vel_mech = 0.f;
         const int velocity_status = g_sensor.getVelocity(vel_mech);
-        if (velocity_status != 0) {
-            vel_mech = 0.f;
-        }
 
         const uint8_t raw = g_sensor.rawState();
         const int sector = g_sensor.lastSector();
@@ -141,25 +158,28 @@ extern "C" void ESC_Main_Loop(void) {
 
         const long theta_mrad = static_cast<long>(theta_mech * kRadToMillirad);
         const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
-        const long vel_mrad_s = static_cast<long>(vel_mech * kRadToMillirad);
-
-        long uq_millivolt = 0;
-        if (auto* foc_drv = static_cast<ClosedLoopDriver*>(g_drv_ptr)) {
-            uq_millivolt = static_cast<long>(foc_drv->qVoltage() * 1000.0f);
-        }
 
         std::printf(
-            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s uq=%ld mV status=(%d,%d)\r\n",
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s \r\n",
             static_cast<unsigned int>(raw),
             sector,
             theta_mrad,
             theta_abs_mrad,
-            vel_mrad_s,
-            uq_millivolt,
-            angle_status,
-            velocity_status);
+			vel_mech);
     }
 }
+extern "C" void ESC_SetVelocityTarget(float velocity_rad_s) {
+    SetMotionTarget(MotionControlType::Velocity, velocity_rad_s);
+}
+
+extern "C" void ESC_SetTorqueTarget(float torque_cmd) {
+    SetMotionTarget(MotionControlType::Torque, torque_cmd);
+}
+
+extern "C" void ESC_SetAngleTarget(float angle_rad) {
+    SetMotionTarget(MotionControlType::Angle, angle_rad);
+}
+
 
 // HAL ISR glue (C linkage)
 extern "C" void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
