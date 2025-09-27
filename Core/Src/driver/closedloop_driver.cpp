@@ -203,22 +203,41 @@ float ClosedLoopDriver::qVoltage() const {
 }
 
 float ClosedLoopDriver::PIController::apply(float error, float dt) {
-    integral += ki * error * dt;
-    if (limit > 0.f) {
-        if (integral > limit) {
-            integral = limit;
-        } else if (integral < -limit) {
-            integral = -limit;
+    const bool has_limit = (limit > 0.f);
+    const float proportional = kp * error;
+
+    // Anti-windup: only integrate when not saturated or when error drives back.
+    bool prevent_int = false;
+    if (has_limit) {
+        if ((integral >= limit && error > 0.f) ||
+            (integral <= -limit && error < 0.f)) {
+            prevent_int = true;
         }
     }
-    float out = kp * error + integral;
-    if (limit > 0.f) {
+
+    float new_integral = integral;
+    if (!prevent_int) {
+        new_integral += ki * error * dt;
+    }
+
+    if (has_limit) {
+        if (new_integral > limit) {
+            new_integral = limit;
+        } else if (new_integral < -limit) {
+            new_integral = -limit;
+        }
+    }
+
+    float out = proportional + new_integral;
+    if (has_limit) {
         if (out > limit) {
             out = limit;
         } else if (out < -limit) {
             out = -limit;
         }
     }
+
+    integral = new_integral;
     return out;
 }
 

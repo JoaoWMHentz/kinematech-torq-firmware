@@ -105,6 +105,8 @@ private:
     float mech_velocity_ { 0.f };
     float last_transition_time_s_ { 0.f };
     float stale_timeout_s_ { 0.0f };
+    float min_transition_dt_s_ { 0.f };
+    uint32_t min_transition_ticks_ { 1u };
 
     // Timer-based timing info
     uint32_t last_capture_ticks_ { 0u };

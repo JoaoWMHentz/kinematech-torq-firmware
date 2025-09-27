@@ -13,6 +13,7 @@ namespace {
 constexpr float kElectricalStep = TWO_PI / 6.0f; // 60 electrical degrees
 constexpr float kMinDt = 1e-7f;
 constexpr float kDefaultStale = 0.1f; // seconds before velocity decays to zero
+constexpr float kMaxReasonableOmega = 2000.0f; // rad/s guard for glitches
 } // namespace
 
 // Static instance used by ISR for dispatch
@@ -34,8 +35,13 @@ int HallSensor::init(float sample_hz) {
 
   sample_period_ = (sample_hz > 0.f) ? (1.0f / sample_hz) : 0.f;
   mechanical_step_ = kElectricalStep / static_cast<float>(pole_pairs_);
-  stale_timeout_s_ =
-      (sample_period_ > 0.f) ? (5.0f * sample_period_) : kDefaultStale;
+  stale_timeout_s_ = kDefaultStale;
+  if (sample_period_ > 0.f) {
+    const float candidate = 5.0f * sample_period_;
+    if (candidate > stale_timeout_s_) {
+      stale_timeout_s_ = candidate;
+    }
+  }
 
   last_sector_ = -1;
   mechanical_angle_wrapped_ = 0.f;
@@ -52,6 +58,29 @@ int HallSensor::init(float sample_hz) {
           ? (static_cast<float>(psc + 1u) / static_cast<float>(timer_clk_hz))
           : 0.f;
   last_capture_ticks_ = 0u;
+
+  if (kMaxReasonableOmega > 0.f) {
+    min_transition_dt_s_ = mechanical_step_ / kMaxReasonableOmega;
+  } else {
+    min_transition_dt_s_ = 0.f;
+  }
+
+  if (tick_period_s_ > 0.f && min_transition_dt_s_ > 0.f) {
+    const float ticks = min_transition_dt_s_ / tick_period_s_;
+    min_transition_ticks_ = (ticks > 1.f)
+                               ? static_cast<uint32_t>(ticks + 0.999f)
+                               : 1u;
+    min_transition_dt_s_ = static_cast<float>(min_transition_ticks_) * tick_period_s_;
+  } else {
+    min_transition_ticks_ = 1u;
+    if (tick_period_s_ > 0.f) {
+      min_transition_dt_s_ = tick_period_s_;
+    }
+  }
+
+  if (min_transition_dt_s_ <= 0.f) {
+    min_transition_dt_s_ = (tick_period_s_ > 0.f) ? tick_period_s_ : kMinDt;
+  }
 
   // Latch initial state from GPIOs so angle/sector are seeded
   last_state_ = readState();
@@ -131,14 +160,16 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
   const uint32_t arr = (tim_ ? __HAL_TIM_GET_AUTORELOAD(tim_) : 0xFFFFu);
 
   // Compute dt in seconds using timer ticks with wrap-around handling
-  float dt_s = 0.f;
+  float dt_s = min_transition_dt_s_;
   if (last_capture_ticks_ == 0u) {
-    dt_s =
-        (tick_period_s_ > 0.f) ? tick_period_s_ : 0.f; // first edge: minimal dt
+    dt_s = (tick_period_s_ > 0.f) ? tick_period_s_ : min_transition_dt_s_;
   } else {
     uint32_t dt_ticks = (capture_ticks >= last_capture_ticks_)
                             ? (capture_ticks - last_capture_ticks_)
                             : (arr - last_capture_ticks_ + capture_ticks + 1u);
+    if (dt_ticks < min_transition_ticks_) {
+      dt_ticks = min_transition_ticks_;
+    }
     dt_s = static_cast<float>(dt_ticks) * tick_period_s_;
     if (dt_s <= kMinDt) {
       dt_s = (sample_period_ > kMinDt) ? sample_period_ : kMinDt;
@@ -180,7 +211,15 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     mechanical_angle_wrapped_ =
         wrapAngle(mechanical_angle_wrapped_ + delta_mech);
 
-    mech_velocity_ = delta_mech / dt_s;
+    float omega = delta_mech / dt_s;
+    if (kMaxReasonableOmega > 0.f) {
+      if (omega > kMaxReasonableOmega) {
+        omega = kMaxReasonableOmega;
+      } else if (omega < -kMaxReasonableOmega) {
+        omega = -kMaxReasonableOmega;
+      }
+    }
+    mech_velocity_ = omega;
     last_transition_time_s_ = nowSeconds();
     last_sector_ = sector;
   }

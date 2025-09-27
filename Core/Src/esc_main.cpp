@@ -33,13 +33,14 @@ extern TIM_HandleTypeDef htim1;
 }
 
 namespace {
-constexpr uint32_t kHallPrintPeriodMs = 100U; // 10 Hz update rate
+constexpr uint32_t kHallPrintPeriodMs = 200U; // 10 Hz update rate
 constexpr float kRadToMillirad = 1000.0f;
 }
 
 // -----------------------------------------------------------------------------
 // Global singletons (avoid dynamic allocation in the interrupt context)
 static Motor g_motor({ POLE_PAIRS, 0.f, 0.f, 0.f, 0.f });
+static uint32_t last_print_ms = 0;
 static HallSensor g_sensor(
     { HALL_A_GPIO_Port, HALL_A_Pin },
     { HALL_B_GPIO_Port, HALL_B_Pin },
@@ -93,11 +94,11 @@ extern "C" void ESC_Main_Init(void) {
     g_drv_ptr->init(VBUS_V, PWM_FREQ_HZ);
 
     /* ---------------------------------------------------------------
-     * 4) Configure operating limits and controller strategy
+     * 4) Configure oper ating limits and controller strategy
      * --------------------------------------------------------------- */
     LimitsCfg lim {};
-    lim.voltage_limit = SVPWM_LIMIT_K * VBUS_V;
-    lim.current_limit = 0.5f;
+    lim.voltage_limit = 8.0f;
+    lim.current_limit = 1.0f;
     lim.velocity_limit = 200.0f;
     g_drv_ptr->setLimits(lim);
 
@@ -108,15 +109,15 @@ extern "C" void ESC_Main_Init(void) {
 
     if (auto* foc_drv = static_cast<ClosedLoopDriver*>(g_drv_ptr)) {
         // SimpleFOC-like defaults for cascaded PI loops
-        ClosedLoopDriver::PIConfig vel_cfg { 1.0f, 0.0f, lim.voltage_limit };
+        ClosedLoopDriver::PIConfig vel_cfg { 20.0f, 0.0f, lim.voltage_limit };
         foc_drv->setVelocityGains(vel_cfg);
 
-        ClosedLoopDriver::PIConfig pos_cfg { 1.0f, 0.0f, lim.velocity_limit };
+        ClosedLoopDriver::PIConfig pos_cfg { 0.0f, 0.0f, lim.velocity_limit };
         foc_drv->setPositionGains(pos_cfg);
 
-        ClosedLoopDriver::PIConfig cur_cfg { 1.0f, 0.0f, lim.voltage_limit };
+        ClosedLoopDriver::PIConfig cur_cfg { 0.0f, 0.0f, lim.voltage_limit };
         foc_drv->setCurrentGains(cur_cfg);
-        foc_drv->setVelocityFilterCutoff(150.0f);
+        foc_drv->setVelocityFilterCutoff(200.0f);
     }
 
     /* ---------------------------------------------------------------
@@ -124,10 +125,9 @@ extern "C" void ESC_Main_Init(void) {
      * - Zero torque request on boot to keep the motor idle.
      * - Enable TIM1 update interrupt so the driver::step runs each cycle.
      * --------------------------------------------------------------- */
-    ESC_SetVelocityTarget(0.0f);
+	ESC_SetVelocityTarget(20.0f);
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
-	ESC_SetVelocityTarget(1.0f);
 }
 
 extern "C" void ESC_Main_Loop(void) {
@@ -137,7 +137,7 @@ extern "C" void ESC_Main_Loop(void) {
      * --------------------------------------------------------------- */
 
 // simple test command
-    static uint32_t last_print_ms = 0U;
+
     const uint32_t now_ms = HAL_GetTick();
     if ((now_ms - last_print_ms) >= kHallPrintPeriodMs && true) {
 		//
@@ -158,14 +158,15 @@ extern "C" void ESC_Main_Loop(void) {
 
         const long theta_mrad = static_cast<long>(theta_mech * kRadToMillirad);
         const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
+        const long vel_mrad = static_cast<long>(vel_mech * kRadToMillirad);
 
         std::printf(
-            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s \r\n",
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s teste \r\n",
             static_cast<unsigned int>(raw),
             sector,
             theta_mrad,
             theta_abs_mrad,
-			vel_mech);
+			vel_mrad);
     }
 }
 extern "C" void ESC_SetVelocityTarget(float velocity_rad_s) {

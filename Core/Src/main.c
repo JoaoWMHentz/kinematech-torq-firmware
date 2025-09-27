@@ -130,8 +130,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	   ESC_Main_Loop();
-	   ProcessUsbCdcRx();
+	  //ESC_Main_Loop();
+	   //ProcessUsbCdcRx();
 	   __WFI();
   }
   /* USER CODE END 3 */
