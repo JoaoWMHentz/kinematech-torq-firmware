@@ -4,13 +4,12 @@
  *      Author: joaoh
  *
  *  High-level ESC application wiring. This module glues together the
- *  hardware timer, motor description, hall sensor, and the closed-loop
- *  FOC driver. The flow mirrors the structure used previously by the
- *  open-loop driver but now routes all torque commands through the FOC
- *  controller:
+ *  hardware timer, motor description, hall sensor, and the open-loop
+ *  driver used for bring-up experiments. The flow mirrors the previous
+ *  closed-loop setup but skips the cascaded PI layers:
  *   1) Instantiate global singletons (no heap usage).
  *   2) Start PWM outputs and complementary channels.
- *   3) Configure driver limits + controller and set an initial target.
+ *   3) Configure driver limits and seed the open-loop commands.
  *   4) Provide HAL callbacks that delegate to the C++ driver logic.
  */
 
@@ -23,7 +22,7 @@
 #include "motor/motor.hpp"
 #include "sensor/hall_sensor.hpp"
 #include "sensor/encoder_i2c.hpp" // stub for future I2C encoder integration
-#include "driver/driver_closedloop.hpp"
+#include "driver/driver_openloop.hpp"
 #include "driver/driver.hpp"
 
 namespace kinematech {
@@ -46,26 +45,10 @@ static HallSensor g_sensor(
     { HALL_B_GPIO_Port, HALL_B_Pin },
     { HALL_C_GPIO_Port, HALL_C_Pin },
     POLE_PAIRS);
-static ClosedLoopDriver g_driver(&htim1);
+static OpenLoopDriver g_driver(&htim1);
 
 // Expose pointer for ISR dispatching.
 static Driver* g_drv_ptr = &g_driver;
-
-static void SetMotionControl(MotionControlType motion) {
-    if (!g_drv_ptr) {
-        return;
-    }
-    auto cfg = g_drv_ptr->ctrl();
-    cfg.motion_ctrl = motion;
-    g_drv_ptr->setController(cfg);
-}
-
-static void SetMotionTarget(MotionControlType motion, float target) {
-    SetMotionControl(motion);
-    if (g_drv_ptr) {
-        g_drv_ptr->setTarget(target);
-    }
-}
 
 extern "C" void ESC_Main_Init(void) {
     /* ---------------------------------------------------------------
@@ -94,38 +77,26 @@ extern "C" void ESC_Main_Init(void) {
     g_drv_ptr->init(VBUS_V, PWM_FREQ_HZ);
 
     /* ---------------------------------------------------------------
-     * 4) Configure oper ating limits and controller strategy
+     * 4) Configure operating limits and seed open-loop commands
      * --------------------------------------------------------------- */
     LimitsCfg lim {};
-    lim.voltage_limit = 8.0f;
-    lim.current_limit = 1.0f;
-    lim.velocity_limit = 200.0f;
+    lim.voltage_limit = SVPWM_LIMIT_K * VBUS_V;
+    lim.current_limit = 0.0f;
+    lim.velocity_limit = 0.0f;
     g_drv_ptr->setLimits(lim);
 
     ControllerCfg cc {};
-    cc.motion_ctrl = MotionControlType::Velocity;
+    cc.motion_ctrl = MotionControlType::Torque;
     cc.torque_ctrl = TorqueControlType::Voltage;
     g_drv_ptr->setController(cc);
 
-    if (auto* foc_drv = static_cast<ClosedLoopDriver*>(g_drv_ptr)) {
-        // SimpleFOC-like defaults for cascaded PI loops
-        ClosedLoopDriver::PIConfig vel_cfg { 20.0f, 0.0f, lim.voltage_limit };
-        foc_drv->setVelocityGains(vel_cfg);
-
-        ClosedLoopDriver::PIConfig pos_cfg { 0.0f, 0.0f, lim.velocity_limit };
-        foc_drv->setPositionGains(pos_cfg);
-
-        ClosedLoopDriver::PIConfig cur_cfg { 0.0f, 0.0f, lim.voltage_limit };
-        foc_drv->setCurrentGains(cur_cfg);
-        foc_drv->setVelocityFilterCutoff(200.0f);
-    }
-
     /* ---------------------------------------------------------------
      * 5) Prime driver state and enable PWM interrupt
-     * - Zero torque request on boot to keep the motor idle.
+     * - Seed voltage + electrical speed for open-loop spinning.
      * - Enable TIM1 update interrupt so the driver::step runs each cycle.
      * --------------------------------------------------------------- */
-	ESC_SetVelocityTarget(20.0f);
+    g_driver.setUq(OL_UQ_V);
+    g_driver.setElectricalSpeed(TWO_PI * OL_FREQ_ELEC_HZ);
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
 }
@@ -170,15 +141,16 @@ extern "C" void ESC_Main_Loop(void) {
     }
 }
 extern "C" void ESC_SetVelocityTarget(float velocity_rad_s) {
-    SetMotionTarget(MotionControlType::Velocity, velocity_rad_s);
+    const float w_elec = velocity_rad_s * static_cast<float>(POLE_PAIRS);
+    g_driver.setElectricalSpeed(w_elec);
 }
 
 extern "C" void ESC_SetTorqueTarget(float torque_cmd) {
-    SetMotionTarget(MotionControlType::Torque, torque_cmd);
+    g_driver.setUq(torque_cmd);
 }
 
 extern "C" void ESC_SetAngleTarget(float angle_rad) {
-    SetMotionTarget(MotionControlType::Angle, angle_rad);
+    (void)angle_rad; // not supported in open-loop mode
 }
 
 

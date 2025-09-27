@@ -24,8 +24,8 @@
 #define SVPWM_LIMIT_K 0.866f // Voltage limit factor (≈ √3/2)
 
 // ===== Open-loop parameters ==============================================================
-#define OL_UQ_V         1.0f  // Initial q-axis voltage [V] (torque command)
-#define OL_FREQ_ELEC_HZ 50.0f // Electrical frequency [Hz]
+#define OL_UQ_V         10.0f  // Initial q-axis voltage [V] (torque command)
+#define OL_FREQ_ELEC_HZ 20.0f // Electrical frequency [Hz]
 #define POLE_PAIRS      15    // Motor pole pairs
 
 // ===== Pin mapping (TIM1) ===============================================================

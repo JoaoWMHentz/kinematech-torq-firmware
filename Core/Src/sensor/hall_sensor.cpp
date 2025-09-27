@@ -14,6 +14,36 @@ constexpr float kElectricalStep = TWO_PI / 6.0f; // 60 electrical degrees
 constexpr float kMinDt = 1e-7f;
 constexpr float kDefaultStale = 0.1f; // seconds before velocity decays to zero
 constexpr float kMaxReasonableOmega = 2000.0f; // rad/s guard for glitches
+
+static float timerInputClockHz(const TIM_HandleTypeDef* tim) {
+  if (tim == nullptr) {
+    return 0.0f;
+  }
+
+  RCC_ClkInitTypeDef clk_cfg {};
+  uint32_t flash_latency = 0u;
+  HAL_RCC_GetClockConfig(&clk_cfg, &flash_latency);
+
+  const bool is_apb2_timer =
+      tim->Instance == TIM1 || tim->Instance == TIM8 || tim->Instance == TIM15 ||
+      tim->Instance == TIM16 || tim->Instance == TIM17;
+
+  uint32_t pclk_hz = 0u;
+  if (is_apb2_timer) {
+    pclk_hz = HAL_RCC_GetPCLK2Freq();
+    if (clk_cfg.APB2CLKDivider != RCC_HCLK_DIV1) {
+      pclk_hz *= 2u;
+    }
+  } else {
+    pclk_hz = HAL_RCC_GetPCLK1Freq();
+    if (clk_cfg.APB1CLKDivider != RCC_HCLK_DIV1) {
+      pclk_hz *= 2u;
+    }
+  }
+
+  return static_cast<float>(pclk_hz);
+}
+
 } // namespace
 
 // Static instance used by ISR for dispatch
@@ -51,12 +81,14 @@ int HallSensor::init(float sample_hz) {
 
   // Bind TIM8 and compute timer tick period (seconds per tick)
   tim_ = &htim8;
-  const uint32_t timer_clk_hz = HAL_RCC_GetPCLK2Freq();
+  const float timer_clk_hz = timerInputClockHz(tim_);
   const uint32_t psc = (tim_ ? tim_->Init.Prescaler : 0u);
-  tick_period_s_ =
-      (timer_clk_hz > 0u)
-          ? (static_cast<float>(psc + 1u) / static_cast<float>(timer_clk_hz))
-          : 0.f;
+  if (timer_clk_hz > 0.0f) {
+    const float counter_clk = timer_clk_hz / static_cast<float>(psc + 1u);
+    tick_period_s_ = (counter_clk > 0.0f) ? (1.0f / counter_clk) : 0.0f;
+  } else {
+    tick_period_s_ = 0.0f;
+  }
   last_capture_ticks_ = 0u;
 
   if (kMaxReasonableOmega > 0.f) {
@@ -157,9 +189,24 @@ HallSensor *HallSensor::instance() { return s_instance_; }
 // -----------------------------------------------------------------------------
 // ISR path: called on TIM8 CH1 capture (hall transition edge)
 void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
+  // Read current hall combination and decode sector
+  const uint8_t state = readState();
+  last_state_ = state;
+  if (state >= state_table_.size()) {
+    return;
+  }
+  const int sector = state_table_[state];
+  if (sector < 0) {
+    return; // invalid combination
+  }
+
+  if (last_sector_ >= 0 && sector == last_sector_) {
+    return; // duplicate edge without sector change
+  }
+
   const uint32_t arr = (tim_ ? __HAL_TIM_GET_AUTORELOAD(tim_) : 0xFFFFu);
 
-  // Compute dt in seconds using timer ticks with wrap-around handling
+  // Compute dt in seconds using timer ticks with wrap-around handling.
   float dt_s = min_transition_dt_s_;
   if (last_capture_ticks_ == 0u) {
     dt_s = (tick_period_s_ > 0.f) ? tick_period_s_ : min_transition_dt_s_;
@@ -176,17 +223,6 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     }
   }
   last_capture_ticks_ = capture_ticks;
-
-  // Read current hall combination and decode sector
-  const uint8_t state = readState();
-  last_state_ = state;
-  if (state >= state_table_.size()) {
-    return;
-  }
-  const int sector = state_table_[state];
-  if (sector < 0) {
-    return; // invalid combination
-  }
 
   if (last_sector_ < 0) {
     // Seed with first valid sector
