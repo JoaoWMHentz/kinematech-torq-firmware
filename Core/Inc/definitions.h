@@ -25,8 +25,16 @@
 
 // ===== Open-loop parameters ==============================================================
 #define OL_UQ_V         10.0f  // Initial q-axis voltage [V] (torque command)
-#define OL_FREQ_ELEC_HZ 20.0f // Electrical frequency [Hz]
+#define OL_FREQ_ELEC_HZ 10.0f // Electrical frequency [Hz]
 #define POLE_PAIRS      15    // Motor pole pairs
+
+// ===== Closed-loop (FOC) PI gains ========================================================
+#define FOC_VEL_KP 0.30f
+#define FOC_VEL_KI 10.0f
+#define FOC_POS_KP 0.0f
+#define FOC_POS_KI 0.0f
+#define FOC_CURR_KP 0.0f
+#define FOC_CURR_KI 0.0f
 
 // ===== Pin mapping (TIM1) ===============================================================
 // CH1  -> PA8  (PA_HIN)   / CH1N -> PB13 (PA_LIN)

@@ -78,6 +78,8 @@ int HallSensor::init(float sample_hz) {
   mechanical_angle_unwrapped_ = 0.f;
   mech_velocity_ = 0.f;
   last_transition_time_s_ = nowSeconds();
+  predicted_angle_unwrapped_ = 0.f;
+  resetTimingHistory();
 
   // Bind TIM8 and compute timer tick period (seconds per tick)
   tim_ = &htim8;
@@ -122,6 +124,7 @@ int HallSensor::init(float sample_hz) {
       mechanical_angle_wrapped_ =
           static_cast<float>(last_sector_) * mechanical_step_;
       mechanical_angle_unwrapped_ = mechanical_angle_wrapped_;
+      predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
     }
   }
 
@@ -142,11 +145,18 @@ int HallSensor::update() {
   }
   // Refresh last_state_ (optional) to aid diagnostics
   last_state_ = readState();
+
+  const float dt_since = now - last_transition_time_s_;
+  if (dt_since > 0.f) {
+    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_ + mech_velocity_ * dt_since;
+  } else {
+    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
+  }
   return 0;
 }
 
 int HallSensor::getAngle(float &theta_mech) {
-  theta_mech = mechanical_angle_wrapped_;
+  theta_mech = wrapAngle(predicted_angle_unwrapped_);
   return 0;
 }
 
@@ -175,16 +185,24 @@ float HallSensor::nowSeconds() {
 }
 
 float HallSensor::wrapAngle(float angle) {
-  if (angle >= TWO_PI) {
+  while (angle >= TWO_PI) {
     angle -= TWO_PI;
   }
-  if (angle < 0.f) {
+  while (angle < 0.f) {
     angle += TWO_PI;
   }
   return angle;
 }
 
 HallSensor *HallSensor::instance() { return s_instance_; }
+
+void HallSensor::resetTimingHistory() {
+  dt_history_sum_ = 0.f;
+  dt_history_count_ = 0u;
+  dt_history_index_ = 0u;
+  last_direction_ = 0;
+  dt_history_.fill(0.f);
+}
 
 // -----------------------------------------------------------------------------
 // ISR path: called on TIM8 CH1 capture (hall transition edge)
@@ -204,23 +222,16 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     return; // duplicate edge without sector change
   }
 
-  const uint32_t arr = (tim_ ? __HAL_TIM_GET_AUTORELOAD(tim_) : 0xFFFFu);
-
-  // Compute dt in seconds using timer ticks with wrap-around handling.
   float dt_s = min_transition_dt_s_;
-  if (last_capture_ticks_ == 0u) {
-    dt_s = (tick_period_s_ > 0.f) ? tick_period_s_ : min_transition_dt_s_;
-  } else {
-    uint32_t dt_ticks = (capture_ticks >= last_capture_ticks_)
-                            ? (capture_ticks - last_capture_ticks_)
-                            : (arr - last_capture_ticks_ + capture_ticks + 1u);
-    if (dt_ticks < min_transition_ticks_) {
-      dt_ticks = min_transition_ticks_;
+  if (tick_period_s_ > 0.f) {
+    const float dt_candidate = static_cast<float>(capture_ticks) * tick_period_s_;
+    if (dt_candidate > kMinDt) {
+      dt_s = dt_candidate;
+    } else if (sample_period_ > kMinDt) {
+      dt_s = sample_period_;
     }
-    dt_s = static_cast<float>(dt_ticks) * tick_period_s_;
-    if (dt_s <= kMinDt) {
-      dt_s = (sample_period_ > kMinDt) ? sample_period_ : kMinDt;
-    }
+  } else if (sample_period_ > 0.f) {
+    dt_s = sample_period_;
   }
   last_capture_ticks_ = capture_ticks;
 
@@ -242,12 +253,41 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
       diff += 6;
     }
 
-    const float delta_mech = static_cast<float>(diff) * mechanical_step_;
+    float delta_mech = 0.f;
+    const int abs_diff = (diff >= 0) ? diff : -diff;
+    if (abs_diff == 1) {
+      const int direction = (diff > 0) ? 1 : -1;
+      if (last_direction_ != 0 && direction != last_direction_) {
+        resetTimingHistory();
+      }
+      last_direction_ = direction;
+
+      if (dt_history_count_ == dt_history_.size()) {
+        dt_history_sum_ -= dt_history_[dt_history_index_];
+      } else {
+        ++dt_history_count_;
+      }
+      dt_history_[dt_history_index_] = dt_s;
+      dt_history_sum_ += dt_s;
+      dt_history_index_ = static_cast<uint8_t>((dt_history_index_ + 1u) % dt_history_.size());
+
+      const float mechanical_cycle = mechanical_step_ * static_cast<float>(dt_history_.size());
+      if (dt_history_count_ == dt_history_.size() && dt_history_sum_ > kMinDt) {
+        const float scale = dt_s / dt_history_sum_;
+        delta_mech = static_cast<float>(direction) * mechanical_cycle * scale;
+      } else {
+        delta_mech = static_cast<float>(diff) * mechanical_step_;
+      }
+    } else {
+      resetTimingHistory();
+      delta_mech = static_cast<float>(diff) * mechanical_step_;
+    }
+
     mechanical_angle_unwrapped_ += delta_mech;
     mechanical_angle_wrapped_ =
         wrapAngle(mechanical_angle_wrapped_ + delta_mech);
 
-    float omega = delta_mech / dt_s;
+    float omega = (dt_s > kMinDt) ? (delta_mech / dt_s) : 0.f;
     if (kMaxReasonableOmega > 0.f) {
       if (omega > kMaxReasonableOmega) {
         omega = kMaxReasonableOmega;
@@ -258,6 +298,7 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     mech_velocity_ = omega;
     last_transition_time_s_ = nowSeconds();
     last_sector_ = sector;
+    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
   }
 }
 

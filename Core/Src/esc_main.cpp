@@ -23,6 +23,7 @@
 #include "sensor/hall_sensor.hpp"
 #include "sensor/encoder_i2c.hpp" // stub for future I2C encoder integration
 #include "driver/driver_openloop.hpp"
+#include "driver/driver_closedloop.hpp"
 #include "driver/driver.hpp"
 
 namespace kinematech {
@@ -32,8 +33,9 @@ extern TIM_HandleTypeDef htim1;
 }
 
 namespace {
-constexpr uint32_t kHallPrintPeriodMs = 200U; // 10 Hz update rate
+constexpr uint32_t kHallPrintPeriodMs = 100U; // 10 Hz update rate
 constexpr float kRadToMillirad = 1000.0f;
+constexpr float kRadPerSecToRpm = 60.0f / TWO_PI;
 }
 
 // -----------------------------------------------------------------------------
@@ -45,10 +47,11 @@ static HallSensor g_sensor(
     { HALL_B_GPIO_Port, HALL_B_Pin },
     { HALL_C_GPIO_Port, HALL_C_Pin },
     POLE_PAIRS);
-static OpenLoopDriver g_driver(&htim1);
+static ClosedLoopDriver g_cl_driver(&htim1);
+// static OpenLoopDriver g_ol_driver(&htim1); // retain for quick open-loop fallback
 
 // Expose pointer for ISR dispatching.
-static Driver* g_drv_ptr = &g_driver;
+static Driver* g_drv_ptr = &g_cl_driver;
 
 extern "C" void ESC_Main_Init(void) {
     /* ---------------------------------------------------------------
@@ -66,8 +69,11 @@ extern "C" void ESC_Main_Init(void) {
      * Driver receives references to the statically allocated motor
      * and sensor objects.
      * --------------------------------------------------------------- */
-    g_drv_ptr->attachMotor(&g_motor);
-    g_drv_ptr->attachSensor(&g_sensor);
+    g_cl_driver.attachMotor(&g_motor);
+    g_cl_driver.attachSensor(&g_sensor);
+    g_drv_ptr = &g_cl_driver;
+    // g_ol_driver.attachMotor(&g_motor);
+    // g_ol_driver.attachSensor(&g_sensor);
 
     /* ---------------------------------------------------------------
      * 3) Initialize driver with electrical parameters
@@ -80,23 +86,46 @@ extern "C" void ESC_Main_Init(void) {
      * 4) Configure operating limits and seed open-loop commands
      * --------------------------------------------------------------- */
     LimitsCfg lim {};
-    lim.voltage_limit = SVPWM_LIMIT_K * VBUS_V;
+    lim.voltage_limit = OL_UQ_V; // conservative voltage limit for closed-loop
     lim.current_limit = 0.0f;
     lim.velocity_limit = 0.0f;
     g_drv_ptr->setLimits(lim);
 
     ControllerCfg cc {};
-    cc.motion_ctrl = MotionControlType::Torque;
+    cc.motion_ctrl = MotionControlType::Velocity;
     cc.torque_ctrl = TorqueControlType::Voltage;
     g_drv_ptr->setController(cc);
 
+    ClosedLoopDriver::PIConfig vel_cfg {};
+    vel_cfg.kp = FOC_VEL_KP;
+    vel_cfg.ki = FOC_VEL_KI;
+    vel_cfg.limit = lim.voltage_limit;
+    g_cl_driver.setVelocityGains(vel_cfg);
+
+    ClosedLoopDriver::PIConfig pos_cfg {};
+    pos_cfg.kp = FOC_POS_KP;
+    pos_cfg.ki = FOC_POS_KI;
+    pos_cfg.limit = lim.velocity_limit;
+    g_cl_driver.setPositionGains(pos_cfg);
+
+    ClosedLoopDriver::PIConfig curr_cfg {};
+    curr_cfg.kp = FOC_CURR_KP;
+    curr_cfg.ki = FOC_CURR_KI;
+    curr_cfg.limit = lim.voltage_limit;
+    g_cl_driver.setCurrentGains(curr_cfg);
+
     /* ---------------------------------------------------------------
      * 5) Prime driver state and enable PWM interrupt
-     * - Seed voltage + electrical speed for open-loop spinning.
-     * - Enable TIM1 update interrupt so the driver::step runs each cycle.
+     * - Closed-loop starts with zero targets; enable update interrupt.
+     * - Keep open-loop seed handy for quick fallback testing.
      * --------------------------------------------------------------- */
-    g_driver.setUq(OL_UQ_V);
-    g_driver.setElectricalSpeed(TWO_PI * OL_FREQ_ELEC_HZ);
+    const float initial_velocity_mech = (TWO_PI * OL_FREQ_ELEC_HZ) / static_cast<float>(POLE_PAIRS);
+    g_cl_driver.setTarget(initial_velocity_mech);
+    // g_ol_driver.init(VBUS_V, PWM_FREQ_HZ);
+    // g_ol_driver.setLimits(lim);
+    // g_ol_driver.setController(cc);
+    // g_ol_driver.setUq(OL_UQ_V);
+    // g_ol_driver.setElectricalSpeed(TWO_PI * OL_FREQ_ELEC_HZ);
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
     __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
 }
@@ -130,29 +159,70 @@ extern "C" void ESC_Main_Loop(void) {
         const long theta_mrad = static_cast<long>(theta_mech * kRadToMillirad);
         const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
         const long vel_mrad = static_cast<long>(vel_mech * kRadToMillirad);
-        const float vel_rpm = vel_mech * (60.0f / TWO_PI);
+        const long vel_rpm_x10 = static_cast<long>(vel_mech * (10.0f * kRadPerSecToRpm));
+        const bool vel_rpm_negative = vel_rpm_x10 < 0;
+        const long vel_rpm_abs_x10 = vel_rpm_negative ? -vel_rpm_x10 : vel_rpm_x10;
+        const long vel_rpm_int = vel_rpm_abs_x10 / 10;
+        const long vel_rpm_frac = vel_rpm_abs_x10 % 10;
+        const char vel_rpm_sign = vel_rpm_negative ? '-' : '+';
 
         std::printf(
-            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s (%.1f rpm) teste \r\n",
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s (%c%ld.%01ld rpm) teste \r\n",
             static_cast<unsigned int>(raw),
             sector,
             theta_mrad,
             theta_abs_mrad,
 			vel_mrad,
-			static_cast<double>(vel_rpm));
+			vel_rpm_sign,
+			vel_rpm_int,
+			vel_rpm_frac);
     }
 }
 extern "C" void ESC_SetVelocityTarget(float velocity_rad_s) {
-    const float w_elec = velocity_rad_s * static_cast<float>(POLE_PAIRS);
-    g_driver.setElectricalSpeed(w_elec);
+    if (!g_drv_ptr) {
+        return;
+    }
+    if (g_drv_ptr == &g_cl_driver) {
+        ControllerCfg cc = g_cl_driver.ctrl();
+        cc.motion_ctrl = MotionControlType::Velocity;
+        g_cl_driver.setController(cc);
+        g_cl_driver.setTarget(velocity_rad_s);
+    }
+    // else if (g_drv_ptr == &g_ol_driver) {
+    //     const float w_elec = velocity_rad_s * static_cast<float>(POLE_PAIRS);
+    //     g_ol_driver.setElectricalSpeed(w_elec);
+    // }
 }
 
 extern "C" void ESC_SetTorqueTarget(float torque_cmd) {
-    g_driver.setUq(torque_cmd);
+    if (!g_drv_ptr) {
+        return;
+    }
+    if (g_drv_ptr == &g_cl_driver) {
+        ControllerCfg cc = g_cl_driver.ctrl();
+        cc.motion_ctrl = MotionControlType::Torque;
+        cc.torque_ctrl = TorqueControlType::Voltage;
+        g_cl_driver.setController(cc);
+        g_cl_driver.setTarget(torque_cmd);
+    }
+    // else if (g_drv_ptr == &g_ol_driver) {
+    //     g_ol_driver.setUq(torque_cmd);
+    // }
 }
 
 extern "C" void ESC_SetAngleTarget(float angle_rad) {
-    (void)angle_rad; // not supported in open-loop mode
+    if (!g_drv_ptr) {
+        return;
+    }
+    if (g_drv_ptr == &g_cl_driver) {
+        ControllerCfg cc = g_cl_driver.ctrl();
+        cc.motion_ctrl = MotionControlType::Angle;
+        g_cl_driver.setController(cc);
+        g_cl_driver.setTarget(angle_rad);
+    }
+    // else {
+    //     (void)angle_rad; // not supported in open-loop mode
+    // }
 }
 
 

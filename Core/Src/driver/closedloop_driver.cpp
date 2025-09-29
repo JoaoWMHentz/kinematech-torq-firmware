@@ -250,7 +250,7 @@ void ClosedLoopDriver::sampleSensor() {
         return;
     }
 
-    sensor_->update();
+    //sensor_->update();
 
     // Capture mechanical angle and unwrap it so the controller stays continuous.
     float theta = theta_mech_raw_;
@@ -408,8 +408,8 @@ void ClosedLoopDriver::updateCurrentDQ(const PhaseCurrents& iabc) {
     const float i_beta = kTwoOverThree * kOneOverSqrt3 * (iabc.ib - iabc.ic);
 
     // Park transform: rotate alpha/beta into dq aligned with electrical angle.
-    const float s = std::sinh(theta_elec_);
-    const float c = std::cosh(theta_elec_);
+    const float s = std::sin(theta_elec_);
+    const float c = std::cos(theta_elec_);
 
     current_meas_.d = c * i_alpha + s * i_beta;
     current_meas_.q = -s * i_alpha + c * i_beta;

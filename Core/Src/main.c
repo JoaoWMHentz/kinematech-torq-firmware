@@ -112,7 +112,7 @@ int main(void)
   MX_TIM1_Init();
   MX_I2C1_Init();
   MX_TIM8_Init();
-  MX_USB_Device_Init();
+  //MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 

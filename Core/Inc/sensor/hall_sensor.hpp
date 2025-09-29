@@ -71,7 +71,7 @@ public:
     /**
      * @return Absolute mechanical angle accumulated across rotations [rad].
      */
-    inline float absoluteAngle() const { return mechanical_angle_unwrapped_; }
+    inline float absoluteAngle() const { return predicted_angle_unwrapped_; }
 
     // Accessor for ISR dispatch (singleton-style binding)
     static HallSensor* instance();
@@ -82,6 +82,7 @@ private:
     uint8_t readState() const;
     static float nowSeconds();
     static float wrapAngle(float angle);
+    void resetTimingHistory();
 
     // Single-instance pointer for ISR dispatching
     static HallSensor* s_instance_;
@@ -102,11 +103,18 @@ private:
     uint8_t last_state_ { 0u };
     float mechanical_angle_wrapped_ { 0.f };
     float mechanical_angle_unwrapped_ { 0.f };
+    float predicted_angle_unwrapped_ { 0.f };
     float mech_velocity_ { 0.f };
     float last_transition_time_s_ { 0.f };
     float stale_timeout_s_ { 0.0f };
     float min_transition_dt_s_ { 0.f };
     uint32_t min_transition_ticks_ { 1u };
+
+    std::array<float, 6> dt_history_ { { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f } };
+    uint8_t dt_history_count_ { 0u };
+    uint8_t dt_history_index_ { 0u };
+    float dt_history_sum_ { 0.f };
+    int last_direction_ { 0 };
 
     // Timer-based timing info
     uint32_t last_capture_ticks_ { 0u };
