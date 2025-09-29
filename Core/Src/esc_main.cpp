@@ -130,14 +130,16 @@ extern "C" void ESC_Main_Loop(void) {
         const long theta_mrad = static_cast<long>(theta_mech * kRadToMillirad);
         const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
         const long vel_mrad = static_cast<long>(vel_mech * kRadToMillirad);
+        const float vel_rpm = vel_mech * (60.0f / TWO_PI);
 
         std::printf(
-            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s teste \r\n",
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s (%.1f rpm) teste \r\n",
             static_cast<unsigned int>(raw),
             sector,
             theta_mrad,
             theta_abs_mrad,
-			vel_mrad);
+			vel_mrad,
+			static_cast<double>(vel_rpm));
     }
 }
 extern "C" void ESC_SetVelocityTarget(float velocity_rad_s) {
