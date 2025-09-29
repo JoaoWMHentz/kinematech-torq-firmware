@@ -15,9 +15,6 @@
 #define SYSCLK_HZ   170000000.0f   // System clock [Hz]
 #define PWM_FREQ_HZ 20000.0f       // PWM frequency [Hz] (center-aligned)
 #define DEADTIME_NS 10             // Target dead-time (~200–300 ns)
-#define HALL_PRINT_PERIOD 100U // 10 Hz update rate
-#define KRAD_TO_MIRAD 1000.0f
-#define KRAD_TO_RPM 60.0f / TWO_PI
 
 // ARR calculation (center-aligned: f_pwm = f_tim / (2 * (ARR + 1)))
 #define TIM1_ARR ((uint32_t)((SYSCLK_HZ / (2.0f * PWM_FREQ_HZ)) - 1.0f))
@@ -50,5 +47,8 @@
 #endif
 #define TWO_PI    (2.0f * (float)M_PI)
 #define _SQRT3_2  0.86602540378f
+#define HALL_PRINT_PERIOD 100U // 10 Hz update rate
+#define KRAD_TO_MIRAD 1000.0f
+#define KRAD_TO_RPM 60.0f / TWO_PI
 
 #endif /* INC_DEFINITIONS_H_ */
