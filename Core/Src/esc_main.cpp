@@ -31,13 +31,6 @@ namespace kinematech {
 extern "C" {
 extern TIM_HandleTypeDef htim1;
 }
-
-namespace {
-constexpr uint32_t kHallPrintPeriodMs = 100U; // 10 Hz update rate
-constexpr float kRadToMillirad = 1000.0f;
-constexpr float kRadPerSecToRpm = 60.0f / TWO_PI;
-}
-
 // -----------------------------------------------------------------------------
 // Global singletons (avoid dynamic allocation in the interrupt context)
 static Motor g_motor({ POLE_PAIRS, 0.f, 0.f, 0.f, 0.f });
@@ -147,7 +140,7 @@ extern "C" void ESC_Main_Loop(void) {
         last_sensor_update_ms = now_ms;
     }
 
-    if ((now_ms - last_print_ms) >= kHallPrintPeriodMs && true) {
+    if ((now_ms - last_print_ms) >= HALL_PRINT_PERIOD && true) {
 		//
         last_print_ms = now_ms;
 
@@ -158,16 +151,16 @@ extern "C" void ESC_Main_Loop(void) {
         }
 
         float vel_mech = 0.f;
-        const int velocity_status = g_sensor.getVelocity(vel_mech);
+        g_sensor.getVelocity(vel_mech);
 
         const uint8_t raw = g_sensor.rawState();
         const int sector = g_sensor.lastSector();
         const float theta_abs = g_sensor.absoluteAngle();
 
-        const long theta_mrad = static_cast<long>(theta_mech * kRadToMillirad);
-        const long theta_abs_mrad = static_cast<long>(theta_abs * kRadToMillirad);
-        const long vel_mrad = static_cast<long>(vel_mech * kRadToMillirad);
-        const long vel_rpm_x10 = static_cast<long>(vel_mech * (10.0f * kRadPerSecToRpm));
+        const long theta_mrad = static_cast<long>(theta_mech * KRAD_TO_MIRAD);
+        const long theta_abs_mrad = static_cast<long>(theta_abs * KRAD_TO_MIRAD);
+        const long vel_mrad = static_cast<long>(vel_mech * KRAD_TO_MIRAD);
+        const long vel_rpm_x10 = static_cast<long>(vel_mech * (10.0f * KRAD_TO_RPM));
         const bool vel_rpm_negative = vel_rpm_x10 < 0;
         const long vel_rpm_abs_x10 = vel_rpm_negative ? -vel_rpm_x10 : vel_rpm_x10;
         const long vel_rpm_int = vel_rpm_abs_x10 / 10;
