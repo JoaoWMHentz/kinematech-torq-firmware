@@ -80,7 +80,6 @@ private:
     void onTimerEdgeIsr(uint32_t capture_ticks);
 
     uint8_t readState() const;
-    static float nowSeconds();
     static float wrapAngle(float angle);
     void resetTimingHistory();
 
@@ -105,7 +104,7 @@ private:
     float mechanical_angle_unwrapped_ { 0.f };
     float predicted_angle_unwrapped_ { 0.f };
     float mech_velocity_ { 0.f };
-    float last_transition_time_s_ { 0.f };
+    volatile uint32_t last_transition_tick_ms_ { 0u };
     float stale_timeout_s_ { 0.0f };
     float min_transition_dt_s_ { 0.f };
     uint32_t min_transition_ticks_ { 1u };

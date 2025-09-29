@@ -139,6 +139,14 @@ extern "C" void ESC_Main_Loop(void) {
 // simple test command
 
     const uint32_t now_ms = HAL_GetTick();
+
+    /* Service lower-rate sensor maintenance outside of the FOC ISR. */
+    static uint32_t last_sensor_update_ms = 0U;
+    if ((now_ms - last_sensor_update_ms) >= 1U) {
+        g_sensor.update();
+        last_sensor_update_ms = now_ms;
+    }
+
     if ((now_ms - last_print_ms) >= kHallPrintPeriodMs && true) {
 		//
         last_print_ms = now_ms;

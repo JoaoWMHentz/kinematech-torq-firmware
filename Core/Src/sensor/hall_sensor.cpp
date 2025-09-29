@@ -8,6 +8,10 @@
 
 #include "definitions.h"
 
+extern "C" {
+extern volatile uint32_t uwTick;
+}
+
 namespace kinematech {
 namespace {
 constexpr float kElectricalStep = TWO_PI / 6.0f; // 60 electrical degrees
@@ -77,7 +81,7 @@ int HallSensor::init(float sample_hz) {
   mechanical_angle_wrapped_ = 0.f;
   mechanical_angle_unwrapped_ = 0.f;
   mech_velocity_ = 0.f;
-  last_transition_time_s_ = nowSeconds();
+  last_transition_tick_ms_ = HAL_GetTick();
   predicted_angle_unwrapped_ = 0.f;
   resetTimingHistory();
 
@@ -139,14 +143,17 @@ int HallSensor::init(float sample_hz) {
 
 int HallSensor::update() {
   // Hardware-based: only handle stale detection; transitions are handled in ISR
-  const float now = nowSeconds();
-  if ((now - last_transition_time_s_) > stale_timeout_s_) {
+  const uint32_t now_ms = HAL_GetTick();
+  const uint32_t elapsed_ms = now_ms - last_transition_tick_ms_;
+  const float dt_since = static_cast<float>(elapsed_ms) * 0.001f;
+
+  if (dt_since > stale_timeout_s_) {
     mech_velocity_ = 0.f;
   }
+
   // Refresh last_state_ (optional) to aid diagnostics
   last_state_ = readState();
 
-  const float dt_since = now - last_transition_time_s_;
   if (dt_since > 0.f) {
     predicted_angle_unwrapped_ = mechanical_angle_unwrapped_ + mech_velocity_ * dt_since;
   } else {
@@ -170,18 +177,14 @@ void HallSensor::setStateTable(const std::array<int8_t, 8> &table) {
 }
 
 uint8_t HallSensor::readState() const {
-  uint8_t hall_a =
-      HAL_GPIO_ReadPin(pins_[0].port, pins_[0].pin) == GPIO_PIN_SET ? 1u : 0u;
-  uint8_t hall_b =
-      HAL_GPIO_ReadPin(pins_[1].port, pins_[1].pin) == GPIO_PIN_SET ? 1u : 0u;
-  uint8_t hall_c =
-      HAL_GPIO_ReadPin(pins_[2].port, pins_[2].pin) == GPIO_PIN_SET ? 1u : 0u;
+  const uint8_t hall_a =
+      ((pins_[0].port->IDR & pins_[0].pin) != 0u) ? 1u : 0u;
+  const uint8_t hall_b =
+      ((pins_[1].port->IDR & pins_[1].pin) != 0u) ? 1u : 0u;
+  const uint8_t hall_c =
+      ((pins_[2].port->IDR & pins_[2].pin) != 0u) ? 1u : 0u;
 
   return static_cast<uint8_t>(hall_a | (hall_b << 1) | (hall_c << 2));
-}
-
-float HallSensor::nowSeconds() {
-  return static_cast<float>(HAL_GetTick()) / 1000.0f;
 }
 
 float HallSensor::wrapAngle(float angle) {
@@ -241,7 +244,7 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     mechanical_angle_wrapped_ = static_cast<float>(sector) * mechanical_step_;
     mechanical_angle_unwrapped_ = mechanical_angle_wrapped_;
     mech_velocity_ = 0.f;
-    last_transition_time_s_ = nowSeconds();
+    last_transition_tick_ms_ = uwTick;
     return;
   }
 
@@ -296,7 +299,7 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
       }
     }
     mech_velocity_ = omega;
-    last_transition_time_s_ = nowSeconds();
+    last_transition_tick_ms_ = uwTick;
     last_sector_ = sector;
     predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
   }

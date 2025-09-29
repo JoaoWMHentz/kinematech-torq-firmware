@@ -250,7 +250,7 @@ void ClosedLoopDriver::sampleSensor() {
         return;
     }
 
-    //sensor_->update();
+    // Sensor housekeeping runs in ESC_Main_Loop to keep this ISR lean.
 
     // Capture mechanical angle and unwrap it so the controller stays continuous.
     float theta = theta_mech_raw_;
