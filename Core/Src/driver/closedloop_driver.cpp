@@ -69,7 +69,7 @@ inline void sincosFast(float angle, float& s, float& c) {
 }
 } // namespace
 
-ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
+	ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
     : htim_(tim) {
     refreshControlDispatch();
 }
