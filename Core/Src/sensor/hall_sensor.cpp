@@ -137,7 +137,7 @@ int HallSensor::update() {
     const float max_offset = mechanical_step_ * HALL_MAX_ADVANCE_FACTOR;
     float delta = current_velocity * dt_since;
     if (max_offset > 0.f) {
-      delta = math::clamp(delta, -max_offset, max_offset);
+      delta = utils::clamp(delta, -max_offset, max_offset);
     }
     predicted += delta;
   }
@@ -147,7 +147,7 @@ int HallSensor::update() {
 }
 
 int HallSensor::getAngle(float &theta_mech) {
-  theta_mech = math::wrap_angle(predicted_angle_unwrapped_);
+  theta_mech = utils::wrap_angle(predicted_angle_unwrapped_);
   return 0;
 }
 
@@ -226,11 +226,11 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
 
   const float delta_mech = static_cast<float>(diff) * mechanical_step_;
   mechanical_angle_unwrapped_ += delta_mech;
-  mechanical_angle_wrapped_ = math::wrap_angle(mechanical_angle_wrapped_ + delta_mech);
+  mechanical_angle_wrapped_ = utils::wrap_angle(mechanical_angle_wrapped_ + delta_mech);
 
   float omega = (dt_s > HALL_MIN_DT_S) ? (delta_mech / dt_s) : 0.f;
   if (HALL_MAX_REASONABLE_OMEGA > 0.f) {
-    omega = math::clamp(omega, -HALL_MAX_REASONABLE_OMEGA, HALL_MAX_REASONABLE_OMEGA);
+    omega = utils::clamp(omega, -HALL_MAX_REASONABLE_OMEGA, HALL_MAX_REASONABLE_OMEGA);
   }
   mech_velocity_ = omega;
   last_transition_tick_ms_ = uwTick;

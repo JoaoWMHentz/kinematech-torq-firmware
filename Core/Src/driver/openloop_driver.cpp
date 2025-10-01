@@ -109,10 +109,10 @@ void OpenLoopDriver::step() {
 
     // θ(k+1) = θ(k) + ω * Δt
     theta_elec_ += w_elec_ * dt_;
-    theta_elec_ = math::wrap_angle(theta_elec_);
+    theta_elec_ = utils::wrap_angle(theta_elec_);
 
     const float Ud = 0.f;      // no d-axis voltage
-    const float Uq = math::clamp(target_, 0.f, v_limit_cache_);
+    const float Uq = utils::clamp(target_, 0.f, v_limit_cache_);
 
     // update PWM outputs
     svpwm(Ud, Uq, theta_elec_, v_limit_cache_, vbus_, period_, htim_);

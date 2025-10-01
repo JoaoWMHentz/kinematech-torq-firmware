@@ -10,27 +10,14 @@
 
 #pragma once
 
-namespace kinematech::math {
+#include <cstdint>
 
-template <typename T>
-constexpr T clamp(T value, T min_val, T max_val) {
-    if (max_val < min_val) {
-        const T tmp = min_val;
-        min_val = max_val;
-        max_val = tmp;
-    }
+namespace kinematech::utils {
 
-    if (value < min_val) {
-        return min_val;
-    }
-    if (value > max_val) {
-        return max_val;
-    }
-    return value;
-}
-
+float clamp(float value, float min_val, float max_val);
+double clamp(double value, double min_val, double max_val);
 float wrap_angle(float angle);
 
-} // namespace kinematech::math
+} // namespace kinematech::utils
 
 #endif /* INC_UTILS_MATH_UTILS_HPP_ */
