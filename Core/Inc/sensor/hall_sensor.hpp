@@ -81,7 +81,6 @@ private:
 
     uint8_t readState() const;
     static float wrapAngle(float angle);
-    void resetTimingHistory();
 
     // Single-instance pointer for ISR dispatching
     static HallSensor* s_instance_;
@@ -109,15 +108,10 @@ private:
     float min_transition_dt_s_ { 0.f };
     uint32_t min_transition_ticks_ { 1u };
 
-    std::array<float, 6> dt_history_ { { 0.f, 0.f, 0.f, 0.f, 0.f, 0.f } };
-    uint8_t dt_history_count_ { 0u };
-    uint8_t dt_history_index_ { 0u };
-    float dt_history_sum_ { 0.f };
-    int last_direction_ { 0 };
-
     // Timer-based timing info
     uint32_t last_capture_ticks_ { 0u };
     float tick_period_s_ { 0.f }; // seconds per timer tick
+    float last_transition_dt_s_ { 0.f };
 };
 
 } // namespace kinematech

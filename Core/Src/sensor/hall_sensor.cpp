@@ -16,11 +16,10 @@ namespace kinematech {
 namespace {
 constexpr float kElectricalStep = TWO_PI / 6.0f; // 60 electrical degrees
 constexpr float kMinDt = 1e-7f;
-constexpr float kDefaultStale = 0.1f; // seconds before velocity decays to zero
+constexpr float kDefaultStale = 0.05f; // seconds before velocity decays to zero
 constexpr float kMaxReasonableOmega = 2000.0f; // rad/s guard for glitches
-constexpr float kGuardMultiplier = 2.5f;       // timeout factor vs expected hall period
-constexpr float kMaxAdvanceFactor = 1.2f;      // cap predictive advance vs hall step
-constexpr float kMinVelocityGuard = 1e-3f;     // ignore guard tweaks near standstill
+constexpr float kGuardMultiplier = 1.6f;       // timeout factor vs last hall period
+constexpr float kMaxAdvanceFactor = 0.9f;      // clamp total advance vs hall step
 
 static float timerInputClockHz(const TIM_HandleTypeDef* tim) {
   if (tim == nullptr) {
@@ -86,7 +85,7 @@ int HallSensor::init(float sample_hz) {
   mech_velocity_ = 0.f;
   last_transition_tick_ms_ = HAL_GetTick();
   predicted_angle_unwrapped_ = 0.f;
-  resetTimingHistory();
+  last_transition_dt_s_ = 0.f;
 
   // Bind TIM8 and compute timer tick period (seconds per tick)
   tim_ = &htim8;
@@ -151,37 +150,34 @@ int HallSensor::update() {
   const float dt_since = static_cast<float>(elapsed_ms) * 0.001f;
 
   const float current_velocity = mech_velocity_;
-  float abs_velocity = (current_velocity >= 0.f) ? current_velocity : -current_velocity;
+  const float abs_velocity = (current_velocity >= 0.f) ? current_velocity : -current_velocity;
 
   float dynamic_timeout = stale_timeout_s_;
-  if (abs_velocity > kMinVelocityGuard && mechanical_step_ > 0.f) {
-    const float expected_period = mechanical_step_ / abs_velocity;
-    if (expected_period > kMinDt) {
-      const float candidate = expected_period * kGuardMultiplier;
-      if (candidate < dynamic_timeout) {
-        dynamic_timeout = candidate;
-      }
+  if (last_transition_dt_s_ > kMinDt) {
+    const float candidate = last_transition_dt_s_ * kGuardMultiplier;
+    if (candidate < dynamic_timeout) {
+      dynamic_timeout = candidate;
     }
   }
 
   const bool stale = (dynamic_timeout > 0.f) && (dt_since > dynamic_timeout);
   if (stale) {
     mech_velocity_ = 0.f;
-    abs_velocity = 0.f;
   }
 
   // Refresh last_state_ (optional) to aid diagnostics
   last_state_ = readState();
 
   float predicted = mechanical_angle_unwrapped_;
-  if (!stale && abs_velocity > 0.f) {
-    float dt_for_prediction = dt_since;
-    const float max_delta = mechanical_step_ * kMaxAdvanceFactor;
-    float delta = current_velocity * dt_for_prediction;
-    if (delta > max_delta) {
-      delta = max_delta;
-    } else if (delta < -max_delta) {
-      delta = -max_delta;
+  if (!stale && abs_velocity > 0.f && mechanical_step_ > 0.f) {
+    const float max_offset = mechanical_step_ * kMaxAdvanceFactor;
+    float delta = current_velocity * dt_since;
+    if (max_offset > 0.f) {
+      if (delta > max_offset) {
+        delta = max_offset;
+      } else if (delta < -max_offset) {
+        delta = -max_offset;
+      }
     }
     predicted += delta;
   }
@@ -227,30 +223,18 @@ float HallSensor::wrapAngle(float angle) {
 
 HallSensor *HallSensor::instance() { return s_instance_; }
 
-void HallSensor::resetTimingHistory() {
-  dt_history_sum_ = 0.f;
-  dt_history_count_ = 0u;
-  dt_history_index_ = 0u;
-  last_direction_ = 0;
-  dt_history_.fill(0.f);
-}
-
 // -----------------------------------------------------------------------------
 // ISR path: called on TIM8 CH1 capture (hall transition edge)
 void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
-  // Read current hall combination and decode sector
   const uint8_t state = readState();
   last_state_ = state;
   if (state >= state_table_.size()) {
     return;
   }
+
   const int sector = state_table_[state];
   if (sector < 0) {
     return; // invalid combination
-  }
-
-  if (last_sector_ >= 0 && sector == last_sector_) {
-    return; // duplicate edge without sector change
   }
 
   float dt_s = min_transition_dt_s_;
@@ -267,70 +251,47 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
   last_capture_ticks_ = capture_ticks;
 
   if (last_sector_ < 0) {
-    // Seed with first valid sector
     last_sector_ = sector;
     mechanical_angle_wrapped_ = static_cast<float>(sector) * mechanical_step_;
     mechanical_angle_unwrapped_ = mechanical_angle_wrapped_;
     mech_velocity_ = 0.f;
     last_transition_tick_ms_ = uwTick;
+    last_transition_dt_s_ = dt_s;
+    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
     return;
   }
 
-  if (sector != last_sector_) {
-    int diff = sector - last_sector_;
-    if (diff > 3) {
-      diff -= 6;
-    } else if (diff < -3) {
-      diff += 6;
-    }
-
-    float delta_mech = 0.f;
-    const int abs_diff = (diff >= 0) ? diff : -diff;
-    if (abs_diff == 1) {
-      const int direction = (diff > 0) ? 1 : -1;
-      if (last_direction_ != 0 && direction != last_direction_) {
-        resetTimingHistory();
-      }
-      last_direction_ = direction;
-
-      if (dt_history_count_ == dt_history_.size()) {
-        dt_history_sum_ -= dt_history_[dt_history_index_];
-      } else {
-        ++dt_history_count_;
-      }
-      dt_history_[dt_history_index_] = dt_s;
-      dt_history_sum_ += dt_s;
-      dt_history_index_ = static_cast<uint8_t>((dt_history_index_ + 1u) % dt_history_.size());
-
-      const float mechanical_cycle = mechanical_step_ * static_cast<float>(dt_history_.size());
-      if (dt_history_count_ == dt_history_.size() && dt_history_sum_ > kMinDt) {
-        const float scale = dt_s / dt_history_sum_;
-        delta_mech = static_cast<float>(direction) * mechanical_cycle * scale;
-      } else {
-        delta_mech = static_cast<float>(diff) * mechanical_step_;
-      }
-    } else {
-      resetTimingHistory();
-      delta_mech = static_cast<float>(diff) * mechanical_step_;
-    }
-
-    mechanical_angle_unwrapped_ += delta_mech;
-    mechanical_angle_wrapped_ =
-        wrapAngle(mechanical_angle_wrapped_ + delta_mech);
-
-    float omega = (dt_s > kMinDt) ? (delta_mech / dt_s) : 0.f;
-    if (kMaxReasonableOmega > 0.f) {
-      if (omega > kMaxReasonableOmega) {
-        omega = kMaxReasonableOmega;
-      } else if (omega < -kMaxReasonableOmega) {
-        omega = -kMaxReasonableOmega;
-      }
-    }
-    mech_velocity_ = omega;
-    last_transition_tick_ms_ = uwTick;
-    last_sector_ = sector;
-    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
+  if (sector == last_sector_) {
+    return; // duplicate edge without sector change
   }
+
+  int diff = sector - last_sector_;
+  if (diff > 3) {
+    diff -= 6;
+  } else if (diff < -3) {
+    diff += 6;
+  }
+  if (diff == 0) {
+    return;
+  }
+
+  const float delta_mech = static_cast<float>(diff) * mechanical_step_;
+  mechanical_angle_unwrapped_ += delta_mech;
+  mechanical_angle_wrapped_ = wrapAngle(mechanical_angle_wrapped_ + delta_mech);
+
+  float omega = (dt_s > kMinDt) ? (delta_mech / dt_s) : 0.f;
+  if (kMaxReasonableOmega > 0.f) {
+    if (omega > kMaxReasonableOmega) {
+      omega = kMaxReasonableOmega;
+    } else if (omega < -kMaxReasonableOmega) {
+      omega = -kMaxReasonableOmega;
+    }
+  }
+  mech_velocity_ = omega;
+  last_transition_tick_ms_ = uwTick;
+  last_transition_dt_s_ = dt_s;
+  last_sector_ = sector;
+  predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
 }
 
 } // namespace kinematech

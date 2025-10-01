@@ -117,6 +117,7 @@ private:
 
         float apply(float error, float dt);
         void reset();
+        void dampen(float factor);
     };
 
     struct DQValues {
@@ -136,6 +137,9 @@ private:
     float torqueLoop(float torque_target);
     void applyFOC(float uq_cmd);
     void updateCurrentDQ(const PhaseCurrents& iabc);
+    float computeVoltageLimit() const;
+    float applyVoltageSlew(float requested_q);
+    void monitorStall();
 
     // --- Cached hardware references ----------------------------------------
     TIM_HandleTypeDef* htim_ { nullptr };
@@ -155,6 +159,7 @@ private:
     float velocity_meas_ { 0.f };
     float velocity_filtered_ { 0.f };
     float velocity_filter_alpha_ { 0.2f };
+    float velocity_filter_alpha_clamped_ { 1.0f };
 
     // --- Control loop state -------------------------------------------------
     float torque_target_ { 0.f };
@@ -171,6 +176,16 @@ private:
     float v_limit_cache_ { 0.f };
     float last_target_ { 0.f };
     bool sensor_ready_ { false };
+
+    float uq_prev_ { 0.f };
+    float uq_slew_rate_ { 8000.0f };      ///< Max dUq/dt [V/s]
+    float stall_velocity_threshold_ { 1.5f }; ///< Considered stalled below this |ω| [rad/s]
+    float stall_timeout_s_ { 0.03f };      ///< Time of saturation before damping integrators [s]
+    float stall_timer_ { 0.f };
+    float stall_decay_factor_ { 0.35f };   ///< Factor applied to integrators on stall release
+
+    float sin_theta_elec_ { 0.f };
+    float cos_theta_elec_ { 1.f };
 };
 
 } // namespace kinematech
