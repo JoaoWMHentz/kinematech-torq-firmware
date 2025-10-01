@@ -19,6 +19,9 @@ extern "C" {
 /// Initialize the ESC application (called from main()).
 void ESC_Main_Init(void);
 
+/// Drive the half-bridge inputs to a known low state before enabling PWM.
+void ESC_PrepareGateDrivers(void);
+
 /// Background application loop (invoked from the super-loop).
 void ESC_Main_Loop(void);
 

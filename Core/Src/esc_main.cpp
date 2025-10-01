@@ -16,6 +16,7 @@
 #include "main.h"
 #include "definitions.h"
 #include "esc_api.h"
+#include "tim.h"
 
 #include <cstdio>
 
@@ -31,6 +32,29 @@ namespace kinematech {
 extern "C" {
 extern TIM_HandleTypeDef htim1;
 }
+
+namespace {
+
+void configureGateGpioLow(GPIO_TypeDef* port, uint16_t pin) {
+    GPIO_InitTypeDef init { };
+    init.Pin = pin;
+    init.Mode = GPIO_MODE_OUTPUT_PP;
+    init.Pull = GPIO_PULLDOWN;
+    init.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(port, &init);
+    HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
+}
+
+void forceAllGatePinsLow() {
+    configureGateGpioLow(PA_HIN_GPIO_Port, PA_HIN_Pin);
+    configureGateGpioLow(PB_HIN_GPIO_Port, PB_HIN_Pin);
+    configureGateGpioLow(PC_HIN_GPIO_Port, PC_HIN_Pin);
+    configureGateGpioLow(PA_LIN_GPIO_Port, PA_LIN_Pin);
+    configureGateGpioLow(PB_LIN_GPIO_Port, PB_LIN_Pin);
+    configureGateGpioLow(PC_LIN_GPIO_Port, PC_LIN_Pin);
+}
+
+} // namespace
 // -----------------------------------------------------------------------------
 // Global singletons (avoid dynamic allocation in the interrupt context)
 static Motor g_motor({ POLE_PAIRS, 0.f, 0.f, 0.f, 0.f });
@@ -46,7 +70,19 @@ static ClosedLoopDriver g_cl_driver(&htim1);
 // Expose pointer for ISR dispatching.
 static Driver* g_drv_ptr = &g_cl_driver;
 
+extern "C" void ESC_PrepareGateDrivers(void) {
+    // Hold all gate-driver inputs low until the PWM module takes ownership.
+    forceAllGatePinsLow();
+}
+
 extern "C" void ESC_Main_Init(void) {
+    // Restore alternate function control before enabling PWM outputs.
+    HAL_TIM_MspPostInit(&htim1);
+
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_1, 0u);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_2, 0u);
+    __HAL_TIM_SET_COMPARE(&htim1, TIM_CHANNEL_3, 0u);
+
     /* ---------------------------------------------------------------
      * 1) Start PWM outputs (including low-side complements)
      * --------------------------------------------------------------- */
@@ -79,7 +115,7 @@ extern "C" void ESC_Main_Init(void) {
      * 4) Configure operating limits and seed open-loop commands
      * --------------------------------------------------------------- */
     LimitsCfg lim {};
-    lim.voltage_limit = OL_UQ_V; // conservative voltage limit for closed-loop
+    lim.voltage_limit = VBUS_V * SVPWM_LIMIT_K; // conservative voltage limit for closed-loop
     lim.current_limit = 0.0f;
     lim.velocity_limit = 0.0f;
     g_drv_ptr->setLimits(lim);
@@ -112,7 +148,7 @@ extern "C" void ESC_Main_Init(void) {
      * - Closed-loop starts with zero targets; enable update interrupt.
      * - Keep open-loop seed handy for quick fallback testing.
      * --------------------------------------------------------------- */
-    const float initial_velocity_mech = (TWO_PI * OL_FREQ_ELEC_HZ) / static_cast<float>(POLE_PAIRS);
+    const float initial_velocity_mech = OL_FREQ_ELEC_HZ;
     g_cl_driver.setTarget(initial_velocity_mech);
     // g_ol_driver.init(VBUS_V, PWM_FREQ_HZ);
     // g_ol_driver.setLimits(lim);
