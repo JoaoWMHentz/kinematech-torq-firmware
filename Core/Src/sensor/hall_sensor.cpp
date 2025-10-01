@@ -14,13 +14,6 @@ extern volatile uint32_t uwTick;
 
 namespace kinematech {
 namespace {
-constexpr float kElectricalStep = TWO_PI / 6.0f; // 60 electrical degrees
-constexpr float kMinDt = 1e-7f;
-constexpr float kDefaultStale = 0.05f; // seconds before velocity decays to zero
-constexpr float kMaxReasonableOmega = 2000.0f; // rad/s guard for glitches
-constexpr float kGuardMultiplier = 1.6f;       // timeout factor vs last hall period
-constexpr float kMaxAdvanceFactor = 0.9f;      // clamp total advance vs hall step
-
 static float timerInputClockHz(const TIM_HandleTypeDef* tim) {
   if (tim == nullptr) {
     return 0.0f;
@@ -70,8 +63,8 @@ int HallSensor::init(float sample_hz) {
   }
 
   sample_period_ = (sample_hz > 0.f) ? (1.0f / sample_hz) : 0.f;
-  mechanical_step_ = kElectricalStep / static_cast<float>(pole_pairs_);
-  stale_timeout_s_ = kDefaultStale;
+  mechanical_step_ = HALL_ELECTRICAL_STEP_RAD / static_cast<float>(pole_pairs_);
+  stale_timeout_s_ = HALL_DEFAULT_STALE_S;
   if (sample_period_ > 0.f) {
     const float candidate = 5.0f * sample_period_;
     if (candidate > stale_timeout_s_) {
@@ -99,8 +92,8 @@ int HallSensor::init(float sample_hz) {
   }
   last_capture_ticks_ = 0u;
 
-  if (kMaxReasonableOmega > 0.f) {
-    min_transition_dt_s_ = mechanical_step_ / kMaxReasonableOmega;
+  if (HALL_MAX_REASONABLE_OMEGA > 0.f) {
+    min_transition_dt_s_ = mechanical_step_ / HALL_MAX_REASONABLE_OMEGA;
   } else {
     min_transition_dt_s_ = 0.f;
   }
@@ -119,7 +112,7 @@ int HallSensor::init(float sample_hz) {
   }
 
   if (min_transition_dt_s_ <= 0.f) {
-    min_transition_dt_s_ = (tick_period_s_ > 0.f) ? tick_period_s_ : kMinDt;
+    min_transition_dt_s_ = (tick_period_s_ > 0.f) ? tick_period_s_ : HALL_MIN_DT_S;
   }
 
   // Latch initial state from GPIOs so angle/sector are seeded
@@ -153,8 +146,8 @@ int HallSensor::update() {
   const float abs_velocity = (current_velocity >= 0.f) ? current_velocity : -current_velocity;
 
   float dynamic_timeout = stale_timeout_s_;
-  if (last_transition_dt_s_ > kMinDt) {
-    const float candidate = last_transition_dt_s_ * kGuardMultiplier;
+  if (last_transition_dt_s_ > HALL_MIN_DT_S) {
+    const float candidate = last_transition_dt_s_ * HALL_GUARD_MULTIPLIER;
     if (candidate < dynamic_timeout) {
       dynamic_timeout = candidate;
     }
@@ -170,7 +163,7 @@ int HallSensor::update() {
 
   float predicted = mechanical_angle_unwrapped_;
   if (!stale && abs_velocity > 0.f && mechanical_step_ > 0.f) {
-    const float max_offset = mechanical_step_ * kMaxAdvanceFactor;
+    const float max_offset = mechanical_step_ * HALL_MAX_ADVANCE_FACTOR;
     float delta = current_velocity * dt_since;
     if (max_offset > 0.f) {
       if (delta > max_offset) {
@@ -240,9 +233,9 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
   float dt_s = min_transition_dt_s_;
   if (tick_period_s_ > 0.f) {
     const float dt_candidate = static_cast<float>(capture_ticks) * tick_period_s_;
-    if (dt_candidate > kMinDt) {
+    if (dt_candidate > HALL_MIN_DT_S) {
       dt_s = dt_candidate;
-    } else if (sample_period_ > kMinDt) {
+    } else if (sample_period_ > HALL_MIN_DT_S) {
       dt_s = sample_period_;
     }
   } else if (sample_period_ > 0.f) {
@@ -279,12 +272,12 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
   mechanical_angle_unwrapped_ += delta_mech;
   mechanical_angle_wrapped_ = wrapAngle(mechanical_angle_wrapped_ + delta_mech);
 
-  float omega = (dt_s > kMinDt) ? (delta_mech / dt_s) : 0.f;
-  if (kMaxReasonableOmega > 0.f) {
-    if (omega > kMaxReasonableOmega) {
-      omega = kMaxReasonableOmega;
-    } else if (omega < -kMaxReasonableOmega) {
-      omega = -kMaxReasonableOmega;
+  float omega = (dt_s > HALL_MIN_DT_S) ? (delta_mech / dt_s) : 0.f;
+  if (HALL_MAX_REASONABLE_OMEGA > 0.f) {
+    if (omega > HALL_MAX_REASONABLE_OMEGA) {
+      omega = HALL_MAX_REASONABLE_OMEGA;
+    } else if (omega < -HALL_MAX_REASONABLE_OMEGA) {
+      omega = -HALL_MAX_REASONABLE_OMEGA;
     }
   }
   mech_velocity_ = omega;

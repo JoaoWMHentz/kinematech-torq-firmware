@@ -13,41 +13,9 @@
 
 #include <cmath>
 
-#if defined(__has_include)
-#if __has_include("arm_math.h")
-#if defined(__CORTEX_M)
-#if (__CORTEX_M == 0)
-#ifndef ARM_MATH_CM0
-#define ARM_MATH_CM0
-#endif
-#elif (__CORTEX_M == 3)
-#ifndef ARM_MATH_CM3
-#define ARM_MATH_CM3
-#endif
-#elif (__CORTEX_M == 4)
-#ifndef ARM_MATH_CM4
-#define ARM_MATH_CM4
-#endif
-#elif (__CORTEX_M == 7)
-#ifndef ARM_MATH_CM7
-#define ARM_MATH_CM7
-#endif
-#elif (__CORTEX_M == 33)
-#ifndef ARM_MATH_CM33
-#define ARM_MATH_CM33
-#endif
-#endif
-#endif
 extern "C" {
 #include "arm_math.h"
 }
-#define KINEMATECH_HAS_ARM_MATH 1
-#endif
-#endif
-
-#ifndef KINEMATECH_HAS_ARM_MATH
-#define KINEMATECH_HAS_ARM_MATH 0
-#endif
 
 #include "definitions.h"
 #include "math/svpwm.h"
@@ -56,20 +24,13 @@ extern "C" {
 
 namespace kinematech {
 namespace {
-constexpr float kTwoOverThree = 0.6666666667f;   // 2/3, Park/Clarke scaling
-constexpr float kOneOverSqrt3 = 0.5773502692f;   // 1/√3, alpha-beta scaling
 
 inline void sincosFast(float angle, float& s, float& c) {
-#if KINEMATECH_HAS_ARM_MATH
     arm_sin_cos_f32(angle, &s, &c);
-#else
-    s = std::sin(angle);
-    c = std::cos(angle);
-#endif
 }
 } // namespace
 
-	ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
+ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
     : htim_(tim) {
     refreshControlDispatch();
 }
@@ -437,8 +398,8 @@ void ClosedLoopDriver::applyFOC(float active_v_limit) {
 
 void ClosedLoopDriver::updateCurrentDQ(const PhaseCurrents& iabc) {
     // Clarke transform: convert three-phase currents into alpha/beta frame.
-    const float i_alpha = kTwoOverThree * (iabc.ia - 0.5f * (iabc.ib + iabc.ic));
-    const float i_beta = kTwoOverThree * kOneOverSqrt3 * (iabc.ib - iabc.ic);
+    const float i_alpha = TWO_OVER_THREE * (iabc.ia - 0.5f * (iabc.ib + iabc.ic));
+    const float i_beta = TWO_OVER_THREE * ONE_OVER_SQRT3 * (iabc.ib - iabc.ic);
 
     // Park transform: rotate alpha/beta into dq aligned with electrical angle.
     const float s = sin_theta_elec_;
