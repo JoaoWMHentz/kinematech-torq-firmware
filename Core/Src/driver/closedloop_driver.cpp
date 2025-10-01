@@ -18,6 +18,7 @@ extern "C" {
 }
 
 #include "definitions.h"
+#include "utils/math_utils.hpp"
 #include <utils/svpwm.h>
 #include "motor/motor.hpp"
 #include "sensor/sensor.hpp"
@@ -145,11 +146,11 @@ void ClosedLoopDriver::setTarget(float target) {
     // Clamp user target according to active control mode and limits.
     if (ctrl_.motion_ctrl == MotionControlType::Torque &&
         ctrl_.torque_ctrl == TorqueControlType::Voltage && v_limit_cache_ > 0.f) {
-        last_target_ = clamp(last_target_, -v_limit_cache_, v_limit_cache_);
+        last_target_ = math::clamp(last_target_, -v_limit_cache_, v_limit_cache_);
     }
 
     if (ctrl_.motion_ctrl == MotionControlType::Velocity && limits_.velocity_limit > 0.f) {
-        last_target_ = clamp(last_target_, -limits_.velocity_limit, limits_.velocity_limit);
+        last_target_ = math::clamp(last_target_, -limits_.velocity_limit, limits_.velocity_limit);
     }
 
     Driver::setTarget(last_target_);
@@ -193,7 +194,7 @@ void ClosedLoopDriver::setVelocityFilterCutoff(float cutoff_hz) {
     }
     const float tau = 1.0f / (2.0f * static_cast<float>(M_PI) * cutoff_hz);
     velocity_filter_alpha_ = dt_ / (dt_ + tau);
-    velocity_filter_alpha_clamped_ = clamp(velocity_filter_alpha_, 0.f, 1.f);
+    velocity_filter_alpha_clamped_ = math::clamp(velocity_filter_alpha_, 0.f, 1.f);
 }
 
 void ClosedLoopDriver::setSensorDirection(int8_t dir) {
@@ -272,12 +273,7 @@ void ClosedLoopDriver::PIController::reset() {
 }
 
 void ClosedLoopDriver::PIController::dampen(float factor) {
-    if (factor < 0.f) {
-        factor = 0.f;
-    } else if (factor > 1.f) {
-        factor = 1.f;
-    }
-    integral *= factor;
+    integral *= math::clamp(factor, 0.f, 1.f);
 }
 
 void ClosedLoopDriver::sampleSensor() {
@@ -315,11 +311,11 @@ void ClosedLoopDriver::sampleSensor() {
     // Convert mechanical angle into electrical and store it for SVPWM.
     if (motor_) {
         const float elec = static_cast<float>(sensor_dir_) * Motor::elecFromMech(*motor_, theta_mech_unwrapped_) + zero_elec_offset_;
-        theta_elec_ = wrapAngle(elec);
+        theta_elec_ = math::wrap_angle(elec);
         sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
         motor_->electrical_angle = theta_elec_;
     } else {
-        theta_elec_ = wrapAngle(static_cast<float>(sensor_dir_) * theta_mech_unwrapped_ + zero_elec_offset_);
+        theta_elec_ = math::wrap_angle(static_cast<float>(sensor_dir_) * theta_mech_unwrapped_ + zero_elec_offset_);
         sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
     }
 }
@@ -345,20 +341,6 @@ float ClosedLoopDriver::unwrapAngle(float raw_angle) {
     theta_mech_prev_unwrapped_ = unwrapped;
     theta_mech_delta_ = diff;
     return unwrapped;
-}
-
-float ClosedLoopDriver::wrapAngle(float angle) const {
-    while (angle >= TWO_PI) {
-        angle -= TWO_PI;
-    }
-    while (angle < 0.f) {
-        angle += TWO_PI;
-    }
-    return angle;
-}
-
-float ClosedLoopDriver::clamp(float value, float min_val, float max_val) const {
-    return (value < min_val) ? min_val : ((value > max_val) ? max_val : value);
 }
 
 float ClosedLoopDriver::computeTorqueSetpoint() {
@@ -433,7 +415,7 @@ float ClosedLoopDriver::applyVoltageSlew(float requested_q) {
         return requested_q;
     }
 
-    const float delta = clamp(requested_q - uq_prev_, -max_delta, max_delta);
+    const float delta = math::clamp(requested_q - uq_prev_, -max_delta, max_delta);
     uq_prev_ += delta;
     return uq_prev_;
 }
@@ -490,7 +472,7 @@ float ClosedLoopDriver::computeSetpointTorqueMode() {
 float ClosedLoopDriver::computeSetpointVelocityMode() {
     float vel_target = last_target_;
     if (has_velocity_limit_) {
-        vel_target = clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
+        vel_target = math::clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
     }
     return velocityLoop(vel_target);
 }
@@ -498,7 +480,7 @@ float ClosedLoopDriver::computeSetpointVelocityMode() {
 float ClosedLoopDriver::computeSetpointAngleMode() {
     float vel_target = positionLoop(last_target_);
     if (has_velocity_limit_) {
-        vel_target = clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
+        vel_target = math::clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
     }
     return velocityLoop(vel_target);
 }
@@ -510,7 +492,7 @@ float ClosedLoopDriver::computeSetpointFallback() {
 float ClosedLoopDriver::torqueLoopVoltageMode(float torque_target, float v_limit) {
     voltage_cmd_.d = 0.f;
     const bool has_limit = (v_limit > 0.f);
-    const float uq_limited = has_limit ? clamp(torque_target, -v_limit, v_limit) : torque_target;
+    const float uq_limited = has_limit ? math::clamp(torque_target, -v_limit, v_limit) : torque_target;
     voltage_cmd_.q = applyVoltageSlew(uq_limited);
     return voltage_cmd_.q;
 }
@@ -518,7 +500,7 @@ float ClosedLoopDriver::torqueLoopVoltageMode(float torque_target, float v_limit
 float ClosedLoopDriver::torqueLoopCurrentMode(float torque_target, float v_limit) {
     iq_target_ = torque_target;
     if (limits_.current_limit > 0.f) {
-        iq_target_ = clamp(iq_target_, -limits_.current_limit, limits_.current_limit);
+        iq_target_ = math::clamp(iq_target_, -limits_.current_limit, limits_.current_limit);
     }
 
     float uq_cmd = 0.f;
@@ -533,7 +515,7 @@ float ClosedLoopDriver::torqueLoopCurrentMode(float torque_target, float v_limit
 
     voltage_cmd_.d = 0.f;
     const bool has_limit = (v_limit > 0.f);
-    const float uq_limited = has_limit ? clamp(uq_cmd, -v_limit, v_limit) : uq_cmd;
+    const float uq_limited = has_limit ? math::clamp(uq_cmd, -v_limit, v_limit) : uq_cmd;
     voltage_cmd_.q = applyVoltageSlew(uq_limited);
     return voltage_cmd_.q;
 }

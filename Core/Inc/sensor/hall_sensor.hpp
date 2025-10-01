@@ -80,7 +80,6 @@ private:
     void onTimerEdgeIsr(uint32_t capture_ticks);
 
     uint8_t readState() const;
-    static float wrapAngle(float angle);
 
     // Single-instance pointer for ISR dispatching
     static HallSensor* s_instance_;

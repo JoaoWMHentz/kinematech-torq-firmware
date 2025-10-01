@@ -129,8 +129,6 @@ private:
     // --- Internal helpers ---------------------------------------------------
     void sampleSensor();
     float unwrapAngle(float raw_angle);
-    float wrapAngle(float angle) const;
-    float clamp(float value, float min_val, float max_val) const;
 
     float computeTorqueSetpoint();
     float velocityLoop(float velocity_target);

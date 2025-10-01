@@ -10,6 +10,8 @@
 #include <utils/svpwm.h>
 #include "driver/driver_openloop.hpp"
 #include "definitions.h"
+#include "utils/math_utils.hpp"
+#include "utils/utils.hpp"
 #include "sensor/sensor.hpp"
 #include "motor/motor.hpp"
 
@@ -21,40 +23,6 @@ extern "C" {
 #include <cmath>
 
 namespace kinematech {
-
-namespace {
-
-/// @brief Helper extracting the effective timer input clock (after APB prescaler doubling).
-static float timerInputClockHz(const TIM_HandleTypeDef* tim) {
-    if (tim == nullptr) {
-        return 0.0f;
-    }
-
-    RCC_ClkInitTypeDef clk_cfg {};
-    uint32_t flash_latency = 0u;
-    HAL_RCC_GetClockConfig(&clk_cfg, &flash_latency);
-
-    const bool is_apb2_timer =
-        tim->Instance == TIM1 || tim->Instance == TIM8 || tim->Instance == TIM15 ||
-        tim->Instance == TIM16 || tim->Instance == TIM17;
-
-    uint32_t pclk_hz = 0u;
-    if (is_apb2_timer) {
-        pclk_hz = HAL_RCC_GetPCLK2Freq();
-        if (clk_cfg.APB2CLKDivider != RCC_HCLK_DIV1) {
-            pclk_hz *= 2u;
-        }
-    } else {
-        pclk_hz = HAL_RCC_GetPCLK1Freq();
-        if (clk_cfg.APB1CLKDivider != RCC_HCLK_DIV1) {
-            pclk_hz *= 2u;
-        }
-    }
-
-    return static_cast<float>(pclk_hz);
-}
-
-} // namespace
 
 OpenLoopDriver::OpenLoopDriver(TIM_HandleTypeDef* tim)
 : htim_(tim) {}
@@ -70,7 +38,7 @@ int OpenLoopDriver::init(float vbus, float loop_hz) {
 #endif
 
     if (htim_) {
-        const float timer_clk = timerInputClockHz(htim_);
+        const float timer_clk = utils::timerInputClockHz(htim_);
         if (timer_clk > 0.0f) {
             const uint32_t prescaler = htim_->Init.Prescaler;
             const float counter_clk = timer_clk / static_cast<float>(prescaler + 1u);
@@ -141,17 +109,10 @@ void OpenLoopDriver::step() {
 
     // θ(k+1) = θ(k) + ω * Δt
     theta_elec_ += w_elec_ * dt_;
-
-    // wrap into [0, 2π)
-    if (theta_elec_ > TWO_PI)  theta_elec_ -= TWO_PI;
-    if (theta_elec_ < 0.f)     theta_elec_ += TWO_PI;
+    theta_elec_ = math::wrap_angle(theta_elec_);
 
     const float Ud = 0.f;      // no d-axis voltage
-    float Uq = target_;        // commanded Vq
-
-    // clamp Vq into valid range
-    if (Uq < 0.f)            Uq = 0.f;
-    if (Uq > v_limit_cache_) Uq = v_limit_cache_;
+    const float Uq = math::clamp(target_, 0.f, v_limit_cache_);
 
     // update PWM outputs
     svpwm(Ud, Uq, theta_elec_, v_limit_cache_, vbus_, period_, htim_);

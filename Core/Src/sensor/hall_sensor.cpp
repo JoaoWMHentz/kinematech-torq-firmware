@@ -7,43 +7,14 @@
 #include "sensor/hall_sensor.hpp"
 
 #include "definitions.h"
+#include "utils/math_utils.hpp"
+#include "utils/utils.hpp"
 
 extern "C" {
 extern volatile uint32_t uwTick;
 }
 
 namespace kinematech {
-namespace {
-static float timerInputClockHz(const TIM_HandleTypeDef* tim) {
-  if (tim == nullptr) {
-    return 0.0f;
-  }
-
-  RCC_ClkInitTypeDef clk_cfg {};
-  uint32_t flash_latency = 0u;
-  HAL_RCC_GetClockConfig(&clk_cfg, &flash_latency);
-
-  const bool is_apb2_timer =
-      tim->Instance == TIM1 || tim->Instance == TIM8 || tim->Instance == TIM15 ||
-      tim->Instance == TIM16 || tim->Instance == TIM17;
-
-  uint32_t pclk_hz = 0u;
-  if (is_apb2_timer) {
-    pclk_hz = HAL_RCC_GetPCLK2Freq();
-    if (clk_cfg.APB2CLKDivider != RCC_HCLK_DIV1) {
-      pclk_hz *= 2u;
-    }
-  } else {
-    pclk_hz = HAL_RCC_GetPCLK1Freq();
-    if (clk_cfg.APB1CLKDivider != RCC_HCLK_DIV1) {
-      pclk_hz *= 2u;
-    }
-  }
-
-  return static_cast<float>(pclk_hz);
-}
-
-} // namespace
 
 // Static instance used by ISR for dispatch
 HallSensor *HallSensor::s_instance_ = nullptr;
@@ -82,7 +53,7 @@ int HallSensor::init(float sample_hz) {
 
   // Bind TIM8 and compute timer tick period (seconds per tick)
   tim_ = &htim8;
-  const float timer_clk_hz = timerInputClockHz(tim_);
+  const float timer_clk_hz = utils::timerInputClockHz(tim_);
   const uint32_t psc = (tim_ ? tim_->Init.Prescaler : 0u);
   if (timer_clk_hz > 0.0f) {
     const float counter_clk = timer_clk_hz / static_cast<float>(psc + 1u);
@@ -166,11 +137,7 @@ int HallSensor::update() {
     const float max_offset = mechanical_step_ * HALL_MAX_ADVANCE_FACTOR;
     float delta = current_velocity * dt_since;
     if (max_offset > 0.f) {
-      if (delta > max_offset) {
-        delta = max_offset;
-      } else if (delta < -max_offset) {
-        delta = -max_offset;
-      }
+      delta = math::clamp(delta, -max_offset, max_offset);
     }
     predicted += delta;
   }
@@ -180,7 +147,7 @@ int HallSensor::update() {
 }
 
 int HallSensor::getAngle(float &theta_mech) {
-  theta_mech = wrapAngle(predicted_angle_unwrapped_);
+  theta_mech = math::wrap_angle(predicted_angle_unwrapped_);
   return 0;
 }
 
@@ -203,17 +170,6 @@ uint8_t HallSensor::readState() const {
 
   return static_cast<uint8_t>(hall_a | (hall_b << 1) | (hall_c << 2));
 }
-
-float HallSensor::wrapAngle(float angle) {
-  while (angle >= TWO_PI) {
-    angle -= TWO_PI;
-  }
-  while (angle < 0.f) {
-    angle += TWO_PI;
-  }
-  return angle;
-}
-
 HallSensor *HallSensor::instance() { return s_instance_; }
 
 // -----------------------------------------------------------------------------
@@ -270,15 +226,11 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
 
   const float delta_mech = static_cast<float>(diff) * mechanical_step_;
   mechanical_angle_unwrapped_ += delta_mech;
-  mechanical_angle_wrapped_ = wrapAngle(mechanical_angle_wrapped_ + delta_mech);
+  mechanical_angle_wrapped_ = math::wrap_angle(mechanical_angle_wrapped_ + delta_mech);
 
   float omega = (dt_s > HALL_MIN_DT_S) ? (delta_mech / dt_s) : 0.f;
   if (HALL_MAX_REASONABLE_OMEGA > 0.f) {
-    if (omega > HALL_MAX_REASONABLE_OMEGA) {
-      omega = HALL_MAX_REASONABLE_OMEGA;
-    } else if (omega < -HALL_MAX_REASONABLE_OMEGA) {
-      omega = -HALL_MAX_REASONABLE_OMEGA;
-    }
+    omega = math::clamp(omega, -HALL_MAX_REASONABLE_OMEGA, HALL_MAX_REASONABLE_OMEGA);
   }
   mech_velocity_ = omega;
   last_transition_tick_ms_ = uwTick;
