@@ -110,16 +110,11 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_TIM1_Init();
-    /* USER CODE BEGIN SysInit */
-  ESC_PrepareGateDrivers();
-  /* USER CODE END SysInit */
-
   MX_I2C1_Init();
   MX_TIM8_Init();
-
-
   MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
+  ESC_PrepareGateDrivers();
   HAL_Delay(1000);
   HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 
