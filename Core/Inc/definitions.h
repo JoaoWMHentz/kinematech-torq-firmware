@@ -26,6 +26,7 @@
 #define POLE_PAIRS        15     // Motor electrical pole pairs
 #define OL_UQ_V           10.0f  // Default open-loop q-axis voltage command [V]
 #define OL_FREQ_ELEC_HZ   10.0f  // Default electrical frequency in open loop [Hz]
+#define VELOCITY_TARGET_RAD_S 15.0f // Initial closed-loop velocity target [rad/s]
 
 // ===== Control gains =====================================================================
 #define FOC_VEL_KP  0.4f   // Velocity-loop proportional gain

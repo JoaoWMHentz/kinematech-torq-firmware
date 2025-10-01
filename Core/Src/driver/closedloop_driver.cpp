@@ -18,7 +18,7 @@ extern "C" {
 }
 
 #include "definitions.h"
-#include "math/svpwm.h"
+#include <utils/svpwm.h>
 #include "motor/motor.hpp"
 #include "sensor/sensor.hpp"
 
@@ -70,17 +70,17 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
 
     // Provide SimpleFOC-like default gains if user has not tuned them yet.
     if (velocity_pi_.kp == 0.f && velocity_pi_.ki == 0.f) {
-        velocity_pi_.kp = 0.3f;
-        velocity_pi_.ki = 10.0f;
+        velocity_pi_.kp = FOC_VEL_KP;
+        velocity_pi_.ki = FOC_VEL_KI;
     }
     if (position_pi_.kp == 0.f && position_pi_.ki == 0.f) {
-        position_pi_.kp = 5.0f;
-        position_pi_.ki = 0.0f;
-    }
+		position_pi_.kp = FOC_POS_KP;
+		position_pi_.ki = FOC_POS_KI;
+	}
     if (current_pi_.kp == 0.f && current_pi_.ki == 0.f) {
-        current_pi_.kp = 1.0f;
-        current_pi_.ki = 0.0f;
-    }
+		current_pi_.kp = FOC_CURR_KP;
+		current_pi_.ki = FOC_CURR_KI;
+	}
 
     setVelocityFilterCutoff(200.0f); // light smoothing for hall velocity
 

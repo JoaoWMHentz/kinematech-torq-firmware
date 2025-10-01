@@ -18,6 +18,7 @@
 
 extern "C" {
 #include "stm32g4xx_hal.h"
+#include "stm32g4xx_hal_tim.h"
 }
 
 namespace kinematech {

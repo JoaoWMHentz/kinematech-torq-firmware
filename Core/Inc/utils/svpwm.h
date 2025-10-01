@@ -13,8 +13,8 @@
  *    5) Normalize by Vbus and update TIM CCR registers.
  */
 
-#ifndef INC_MATH_SVPWM_H_
-#define INC_MATH_SVPWM_H_
+#ifndef INC_UTILS_SVPWM_H_
+#define INC_UTILS_SVPWM_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,4 +47,4 @@ void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
 }
 #endif
 
-#endif /* INC_MATH_SVPWM_H_ */
+#endif /* INC_UTILS_SVPWM_H_ */

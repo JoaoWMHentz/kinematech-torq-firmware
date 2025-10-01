@@ -125,31 +125,13 @@ extern "C" void ESC_Main_Init(void) {
     cc.torque_ctrl = TorqueControlType::Voltage;
     g_drv_ptr->setController(cc);
 
-    ClosedLoopDriver::PIConfig vel_cfg {};
-    vel_cfg.kp = FOC_VEL_KP;
-    vel_cfg.ki = FOC_VEL_KI;
-    vel_cfg.limit = lim.voltage_limit;
-    g_cl_driver.setVelocityGains(vel_cfg);
-
-    ClosedLoopDriver::PIConfig pos_cfg {};
-    pos_cfg.kp = FOC_POS_KP;
-    pos_cfg.ki = FOC_POS_KI;
-    pos_cfg.limit = lim.velocity_limit;
-    g_cl_driver.setPositionGains(pos_cfg);
-
-    ClosedLoopDriver::PIConfig curr_cfg {};
-    curr_cfg.kp = FOC_CURR_KP;
-    curr_cfg.ki = FOC_CURR_KI;
-    curr_cfg.limit = lim.voltage_limit;
-    g_cl_driver.setCurrentGains(curr_cfg);
-
     /* ---------------------------------------------------------------
      * 5) Prime driver state and enable PWM interrupt
      * - Closed-loop starts with zero targets; enable update interrupt.
      * - Keep open-loop seed handy for quick fallback testing.
      * --------------------------------------------------------------- */
-    const float initial_velocity_mech = OL_FREQ_ELEC_HZ;
-    g_cl_driver.setTarget(initial_velocity_mech);
+
+    g_cl_driver.setTarget(VELOCITY_TARGET_RAD_S);
     // g_ol_driver.init(VBUS_V, PWM_FREQ_HZ);
     // g_ol_driver.setLimits(lim);
     // g_ol_driver.setController(cc);

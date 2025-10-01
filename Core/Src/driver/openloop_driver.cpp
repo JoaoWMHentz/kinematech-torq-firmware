@@ -7,8 +7,8 @@
  *  Applies a commanded q-axis voltage (Vq) at a given electrical speed.
  */
 
+#include <utils/svpwm.h>
 #include "driver/driver_openloop.hpp"
-#include "math/svpwm.h"
 #include "definitions.h"
 #include "sensor/sensor.hpp"
 #include "motor/motor.hpp"
