@@ -22,9 +22,6 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-#include "main.h"
-#include <stdbool.h>
-#include <string.h>
 
 /* USER CODE END INCLUDE */
 
@@ -97,12 +94,6 @@ uint8_t UserRxBufferFS[APP_RX_DATA_SIZE];
 uint8_t UserTxBufferFS[APP_TX_DATA_SIZE];
 
 /* USER CODE BEGIN PRIVATE_VARIABLES */
-static volatile bool cdc_tx_ready = true;
-
-static uint8_t cdc_rx_ring[APP_RX_DATA_SIZE];
-static volatile uint32_t cdc_rx_head = 0U;
-static volatile uint32_t cdc_rx_tail = 0U;
-static volatile bool cdc_rx_overflow = false;
 
 /* USER CODE END PRIVATE_VARIABLES */
 
@@ -164,11 +155,6 @@ static int8_t CDC_Init_FS(void)
   /* Set Application Buffers */
   USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, 0);
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, UserRxBufferFS);
-  cdc_tx_ready = true;
-  cdc_rx_head = 0U;
-  cdc_rx_tail = 0U;
-  cdc_rx_overflow = false;
-  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);
   /* USER CODE END 3 */
 }
@@ -275,25 +261,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  const uint32_t length = (Len != NULL) ? *Len : 0U;
-
-  for (uint32_t i = 0U; i < length; ++i)
-  {
-    const uint8_t byte = Buf[i];
-    const uint32_t next_head = (cdc_rx_head + 1U) % APP_RX_DATA_SIZE;
-
-    if (next_head == cdc_rx_tail)
-    {
-      /* Buffer full: drop newest byte and flag overflow. */
-      cdc_rx_overflow = true;
-      break;
-    }
-
-    cdc_rx_ring[cdc_rx_head] = byte;
-    cdc_rx_head = next_head;
-  }
-
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, Buf);
+  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
   return (USBD_OK);
   /* USER CODE END 6 */
@@ -343,213 +311,11 @@ static int8_t CDC_TransmitCplt_FS(uint8_t *Buf, uint32_t *Len, uint8_t epnum)
   UNUSED(Buf);
   UNUSED(Len);
   UNUSED(epnum);
-  cdc_tx_ready = true;
   /* USER CODE END 13 */
   return result;
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
-static bool USB_DeviceConfigured(void)
-{
-  return (hUsbDeviceFS.dev_state == USBD_STATE_CONFIGURED);
-}
-
-static uint8_t CDC_Transmit_Blocking(const uint8_t *Buf, uint16_t Len, uint32_t timeout_ms)
-{
-  if ((Buf == NULL) || (Len == 0U))
-  {
-    return USBD_OK;
-  }
-
-  if (!USB_DeviceConfigured())
-  {
-    /* Device not yet enumerated: pretend success to avoid stalling printf. */
-    return USBD_OK;
-  }
-
-  uint32_t start_tick = HAL_GetTick();
-
-  /* Wait for any previous transfer to complete. */
-  while (!cdc_tx_ready)
-  {
-    if ((HAL_GetTick() - start_tick) >= timeout_ms)
-    {
-      return USBD_BUSY;
-    }
-    HAL_Delay(1U);
-  }
-
-  if (Len > APP_TX_DATA_SIZE)
-  {
-    Len = APP_TX_DATA_SIZE;
-  }
-
-  cdc_tx_ready = false;
-  memcpy(UserTxBufferFS, Buf, Len);
-  USBD_CDC_SetTxBuffer(&hUsbDeviceFS, UserTxBufferFS, Len);
-  const uint8_t result = USBD_CDC_TransmitPacket(&hUsbDeviceFS);
-  if (result != USBD_OK)
-  {
-    cdc_tx_ready = true;
-    return result;
-  }
-
-  /* Wait for the transfer complete callback. */
-  while (!cdc_tx_ready)
-  {
-    if ((HAL_GetTick() - start_tick) >= timeout_ms)
-    {
-      cdc_tx_ready = true;
-      return USBD_BUSY;
-    }
-    HAL_Delay(1U);
-  }
-
-  return USBD_OK;
-}
-
-static bool CDC_FlushTxChunk(uint8_t *chunk, uint32_t *chunk_len, uint32_t timeout_ms)
-{
-  if ((chunk == NULL) || (chunk_len == NULL))
-  {
-    return false;
-  }
-
-  if (*chunk_len == 0U)
-  {
-    return true;
-  }
-
-  const uint16_t len = (uint16_t)(*chunk_len);
-  const uint8_t result = CDC_Transmit_Blocking(chunk, len, timeout_ms);
-  if (result != USBD_OK)
-  {
-    return false;
-  }
-
-  *chunk_len = 0U;
-  return true;
-}
-
-uint32_t CDC_BytesAvailable_FS(void)
-{
-  uint32_t available;
-
-  __disable_irq();
-  if (cdc_rx_head >= cdc_rx_tail)
-  {
-    available = cdc_rx_head - cdc_rx_tail;
-  }
-  else
-  {
-    available = (APP_RX_DATA_SIZE - cdc_rx_tail) + cdc_rx_head;
-  }
-  __enable_irq();
-
-  return available;
-}
-
-uint32_t CDC_Read_FS(uint8_t *Buf, uint32_t Len)
-{
-  if ((Buf == NULL) || (Len == 0U))
-  {
-    return 0U;
-  }
-
-  uint32_t count = 0U;
-
-  __disable_irq();
-  while ((cdc_rx_tail != cdc_rx_head) && (count < Len))
-  {
-    Buf[count++] = cdc_rx_ring[cdc_rx_tail];
-    cdc_rx_tail = (cdc_rx_tail + 1U) % APP_RX_DATA_SIZE;
-  }
-  __enable_irq();
-
-  return count;
-}
-
-bool CDC_RxOverflowed_FS(void)
-{
-  return cdc_rx_overflow;
-}
-
-void CDC_ClearRxOverflow_FS(void)
-{
-  cdc_rx_overflow = false;
-}
-
-int _write(int file, char *ptr, int len)
-{
-  (void)file;
-
-  if ((ptr == NULL) || (len <= 0))
-  {
-    return 0;
-  }
-
-  uint8_t chunk[APP_TX_DATA_SIZE];
-  uint32_t chunk_len = 0U;
-  int processed = 0;
-
-  for (int i = 0; i < len; ++i)
-  {
-    const char ch = ptr[i];
-
-    if (ch == '\n')
-    {
-      if (chunk_len >= (APP_TX_DATA_SIZE - 2U))
-      {
-        if (!CDC_FlushTxChunk(chunk, &chunk_len, 100U))
-        {
-          return processed;
-        }
-      }
-      chunk[chunk_len++] = '\r';
-      chunk[chunk_len++] = '\n';
-    }
-    else
-    {
-      if (chunk_len >= (APP_TX_DATA_SIZE - 1U))
-      {
-        if (!CDC_FlushTxChunk(chunk, &chunk_len, 100U))
-        {
-          return processed;
-        }
-      }
-      chunk[chunk_len++] = (uint8_t)ch;
-    }
-
-    ++processed;
-  }
-
-  if (!CDC_FlushTxChunk(chunk, &chunk_len, 100U))
-  {
-    return processed;
-  }
-
-  return len;
-}
-
-int __io_putchar(int ch)
-{
-  char tmp = (char)ch;
-  (void)_write(0, &tmp, 1);
-  return ch;
-}
-
-int __io_getchar(void)
-{
-  uint8_t byte = 0U;
-
-  while (CDC_Read_FS(&byte, 1U) == 0U)
-  {
-    /* Yield to USB ISR while waiting for data. */
-    HAL_Delay(1U);
-  }
-
-  return (int)byte;
-}
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
