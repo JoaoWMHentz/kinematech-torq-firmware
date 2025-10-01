@@ -67,9 +67,8 @@ void svpwm(float Ud, float Uq, float theta, float v_limit, float vbus,
            uint32_t period, TIM_HandleTypeDef *htim)
 {
 
-    float s;
-    float c;
-    arm_sin_cos_f32(theta, &s, &c);
+    const float s = sinf(theta);
+    const float c = cosf(theta);
     const float Ualpha = c * Ud - s * Uq;
     const float Ubeta  = s * Ud + c * Uq;
 
