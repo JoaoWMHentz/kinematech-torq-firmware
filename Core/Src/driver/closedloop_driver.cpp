@@ -13,22 +13,14 @@
 
 #include <cmath>
 
-extern "C" {
-#include "arm_math.h"
-}
-
 #include "definitions.h"
 #include "utils/math_utils.hpp"
-#include <utils/svpwm.h>
 #include "motor/motor.hpp"
 #include "sensor/sensor.hpp"
 
 namespace kinematech {
 namespace {
 
-inline void sincosFast(float angle, float& s, float& c) {
-    arm_sin_cos_f32(angle, &s, &c);
-}
 } // namespace
 
 ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
@@ -45,11 +37,7 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
     vbus_ = vbus;
     dt_ = 1.0f / loop_hz;
 
-#if defined(__HAL_TIM_GET_AUTORELOAD)
     period_ = __HAL_TIM_GET_AUTORELOAD(htim_);
-#else
-    period_ = (htim_ ? htim_->Init.Period : 0u);
-#endif
 
     // Reset controllers/state so previous runs do not leak.
     velocity_pi_.reset();
@@ -312,11 +300,11 @@ void ClosedLoopDriver::sampleSensor() {
     if (motor_) {
         const float elec = static_cast<float>(sensor_dir_) * Motor::elecFromMech(*motor_, theta_mech_unwrapped_) + zero_elec_offset_;
         theta_elec_ = utils::wrap_angle(elec);
-        sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
+        utils::sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
         motor_->electrical_angle = theta_elec_;
     } else {
         theta_elec_ = utils::wrap_angle(static_cast<float>(sensor_dir_) * theta_mech_unwrapped_ + zero_elec_offset_);
-        sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
+        utils::sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
     }
 }
 
@@ -375,7 +363,7 @@ void ClosedLoopDriver::applyFOC(float active_v_limit) {
         v_limit = (limits_.voltage_limit > 0.f) ? limits_.voltage_limit : (SVPWM_LIMIT_K * vbus);
     }
 
-    svpwm(Ud, Uq, theta_elec_, v_limit, vbus, period_, htim_);
+    utils::svpwm(Ud, Uq, theta_elec_, v_limit, vbus, period_, htim_);
 }
 
 void ClosedLoopDriver::updateCurrentDQ(const PhaseCurrents& iabc) {

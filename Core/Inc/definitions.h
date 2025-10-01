@@ -23,7 +23,7 @@
 // ===== Motor / power defaults ============================================================
 #define VBUS_V            20.0f  // Nominal DC bus used for duty normalization [V]
 #define SVPWM_LIMIT_K     0.866f // Linear modulation limit factor (≈ √3 / 2)
-#define POLE_PAIRS        15     // Motor electrical pole pairs
+#define POLE_PAIRS        10     // Motor electrical pole pairs
 #define OL_UQ_V           10.0f  // Default open-loop q-axis voltage command [V]
 #define OL_FREQ_ELEC_HZ   10.0f  // Default electrical frequency in open loop [Hz]
 #define VELOCITY_TARGET_RAD_S 15.0f // Initial closed-loop velocity target [rad/s]

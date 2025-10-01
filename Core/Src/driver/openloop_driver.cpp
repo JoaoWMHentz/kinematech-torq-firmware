@@ -7,7 +7,6 @@
  *  Applies a commanded q-axis voltage (Vq) at a given electrical speed.
  */
 
-#include <utils/svpwm.h>
 #include "driver/driver_openloop.hpp"
 #include "definitions.h"
 #include "utils/math_utils.hpp"
@@ -115,7 +114,7 @@ void OpenLoopDriver::step() {
     const float Uq = utils::clamp(target_, 0.f, v_limit_cache_);
 
     // update PWM outputs
-    svpwm(Ud, Uq, theta_elec_, v_limit_cache_, vbus_, period_, htim_);
+    utils::svpwm(Ud, Uq, theta_elec_, v_limit_cache_, vbus_, period_, htim_);
 }
 
 void OpenLoopDriver::setElectricalSpeed(float w_elec_rad_s) {
