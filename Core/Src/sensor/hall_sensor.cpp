@@ -18,6 +18,9 @@ constexpr float kElectricalStep = TWO_PI / 6.0f; // 60 electrical degrees
 constexpr float kMinDt = 1e-7f;
 constexpr float kDefaultStale = 0.1f; // seconds before velocity decays to zero
 constexpr float kMaxReasonableOmega = 2000.0f; // rad/s guard for glitches
+constexpr float kGuardMultiplier = 2.5f;       // timeout factor vs expected hall period
+constexpr float kMaxAdvanceFactor = 1.2f;      // cap predictive advance vs hall step
+constexpr float kMinVelocityGuard = 1e-3f;     // ignore guard tweaks near standstill
 
 static float timerInputClockHz(const TIM_HandleTypeDef* tim) {
   if (tim == nullptr) {
@@ -147,18 +150,43 @@ int HallSensor::update() {
   const uint32_t elapsed_ms = now_ms - last_transition_tick_ms_;
   const float dt_since = static_cast<float>(elapsed_ms) * 0.001f;
 
-  if (dt_since > stale_timeout_s_) {
+  const float current_velocity = mech_velocity_;
+  float abs_velocity = (current_velocity >= 0.f) ? current_velocity : -current_velocity;
+
+  float dynamic_timeout = stale_timeout_s_;
+  if (abs_velocity > kMinVelocityGuard && mechanical_step_ > 0.f) {
+    const float expected_period = mechanical_step_ / abs_velocity;
+    if (expected_period > kMinDt) {
+      const float candidate = expected_period * kGuardMultiplier;
+      if (candidate < dynamic_timeout) {
+        dynamic_timeout = candidate;
+      }
+    }
+  }
+
+  const bool stale = (dynamic_timeout > 0.f) && (dt_since > dynamic_timeout);
+  if (stale) {
     mech_velocity_ = 0.f;
+    abs_velocity = 0.f;
   }
 
   // Refresh last_state_ (optional) to aid diagnostics
   last_state_ = readState();
 
-  if (dt_since > 0.f) {
-    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_ + mech_velocity_ * dt_since;
-  } else {
-    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
+  float predicted = mechanical_angle_unwrapped_;
+  if (!stale && abs_velocity > 0.f) {
+    float dt_for_prediction = dt_since;
+    const float max_delta = mechanical_step_ * kMaxAdvanceFactor;
+    float delta = current_velocity * dt_for_prediction;
+    if (delta > max_delta) {
+      delta = max_delta;
+    } else if (delta < -max_delta) {
+      delta = -max_delta;
+    }
+    predicted += delta;
   }
+
+  predicted_angle_unwrapped_ = predicted;
   return 0;
 }
 
