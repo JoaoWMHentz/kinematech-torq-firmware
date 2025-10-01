@@ -134,12 +134,21 @@ private:
     float computeTorqueSetpoint();
     float velocityLoop(float velocity_target);
     float positionLoop(float position_target);
-    float torqueLoop(float torque_target);
-    void applyFOC(float uq_cmd);
+    float torqueLoop(float torque_target, float v_limit);
+    void applyFOC(float active_v_limit);
     void updateCurrentDQ(const PhaseCurrents& iabc);
     float computeVoltageLimit() const;
     float applyVoltageSlew(float requested_q);
-    void monitorStall();
+    void monitorStall(float v_limit);
+    void refreshControlDispatch();
+
+    float computeSetpointTorqueMode();
+    float computeSetpointVelocityMode();
+    float computeSetpointAngleMode();
+    float computeSetpointFallback();
+
+    float torqueLoopVoltageMode(float torque_target, float v_limit);
+    float torqueLoopCurrentMode(float torque_target, float v_limit);
 
     // --- Cached hardware references ----------------------------------------
     TIM_HandleTypeDef* htim_ { nullptr };
@@ -177,6 +186,12 @@ private:
     float last_target_ { 0.f };
     bool sensor_ready_ { false };
 
+    using SetpointFn = float (ClosedLoopDriver::*)();
+    using TorqueLoopFn = float (ClosedLoopDriver::*)(float torque_target, float v_limit);
+
+    SetpointFn setpoint_fn_ { &ClosedLoopDriver::computeSetpointFallback };
+    TorqueLoopFn torque_loop_fn_ { &ClosedLoopDriver::torqueLoopVoltageMode };
+
     float uq_prev_ { 0.f };
     float uq_slew_rate_ { 8000.0f };      ///< Max dUq/dt [V/s]
     float stall_velocity_threshold_ { 1.5f }; ///< Considered stalled below this |ω| [rad/s]
@@ -186,6 +201,7 @@ private:
 
     float sin_theta_elec_ { 0.f };
     float cos_theta_elec_ { 1.f };
+    bool has_velocity_limit_ { false };
 };
 
 } // namespace kinematech

@@ -13,6 +13,42 @@
 
 #include <cmath>
 
+#if defined(__has_include)
+#if __has_include("arm_math.h")
+#if defined(__CORTEX_M)
+#if (__CORTEX_M == 0)
+#ifndef ARM_MATH_CM0
+#define ARM_MATH_CM0
+#endif
+#elif (__CORTEX_M == 3)
+#ifndef ARM_MATH_CM3
+#define ARM_MATH_CM3
+#endif
+#elif (__CORTEX_M == 4)
+#ifndef ARM_MATH_CM4
+#define ARM_MATH_CM4
+#endif
+#elif (__CORTEX_M == 7)
+#ifndef ARM_MATH_CM7
+#define ARM_MATH_CM7
+#endif
+#elif (__CORTEX_M == 33)
+#ifndef ARM_MATH_CM33
+#define ARM_MATH_CM33
+#endif
+#endif
+#endif
+extern "C" {
+#include "arm_math.h"
+}
+#define KINEMATECH_HAS_ARM_MATH 1
+#endif
+#endif
+
+#ifndef KINEMATECH_HAS_ARM_MATH
+#define KINEMATECH_HAS_ARM_MATH 0
+#endif
+
 #include "definitions.h"
 #include "math/svpwm.h"
 #include "motor/motor.hpp"
@@ -22,10 +58,21 @@ namespace kinematech {
 namespace {
 constexpr float kTwoOverThree = 0.6666666667f;   // 2/3, Park/Clarke scaling
 constexpr float kOneOverSqrt3 = 0.5773502692f;   // 1/√3, alpha-beta scaling
+
+inline void sincosFast(float angle, float& s, float& c) {
+#if KINEMATECH_HAS_ARM_MATH
+    arm_sin_cos_f32(angle, &s, &c);
+#else
+    s = std::sin(angle);
+    c = std::cos(angle);
+#endif
+}
 } // namespace
 
 ClosedLoopDriver::ClosedLoopDriver(TIM_HandleTypeDef* tim)
-    : htim_(tim) {}
+    : htim_(tim) {
+    refreshControlDispatch();
+}
 
 int ClosedLoopDriver::init(float vbus, float loop_hz) {
     if (loop_hz <= 0.f || !htim_) {
@@ -94,6 +141,8 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
     uq_prev_ = 0.f;
     stall_timer_ = 0.f;
 
+    refreshControlDispatch();
+
     // Seed sensor state so the first control step starts with a valid angle.
     if (sensor_) {
         if (sensor_->init(loop_hz) == 0) {
@@ -111,6 +160,7 @@ int ClosedLoopDriver::init(float vbus, float loop_hz) {
 void ClosedLoopDriver::setLimits(const LimitsCfg& lim) {
     Driver::setLimits(lim);
     v_limit_cache_ = limits_.voltage_limit;
+    has_velocity_limit_ = (limits_.velocity_limit > 0.f);
     velocity_pi_.limit = (limits_.voltage_limit > 0.f) ? limits_.voltage_limit : velocity_pi_.limit;
     current_pi_.limit = (limits_.voltage_limit > 0.f) ? limits_.voltage_limit : current_pi_.limit;
     position_pi_.limit = (limits_.velocity_limit > 0.f) ? limits_.velocity_limit : position_pi_.limit;
@@ -125,6 +175,7 @@ void ClosedLoopDriver::setLimits(const LimitsCfg& lim) {
 
 void ClosedLoopDriver::setController(const ControllerCfg& cc) {
     Driver::setController(cc);
+    refreshControlDispatch();
 }
 
 void ClosedLoopDriver::setTarget(float target) {
@@ -146,9 +197,10 @@ void ClosedLoopDriver::setTarget(float target) {
 void ClosedLoopDriver::step() {
     sampleSensor();
     const float torque_ref = computeTorqueSetpoint();
-    const float uq = torqueLoop(torque_ref);
-    monitorStall();
-    applyFOC(uq);
+    const float active_v_limit = computeVoltageLimit();
+    torqueLoop(torque_ref, active_v_limit);
+    monitorStall(active_v_limit);
+    applyFOC(active_v_limit);
 }
 
 void ClosedLoopDriver::setVelocityGains(const PIConfig& cfg) {
@@ -303,13 +355,11 @@ void ClosedLoopDriver::sampleSensor() {
     if (motor_) {
         const float elec = static_cast<float>(sensor_dir_) * Motor::elecFromMech(*motor_, theta_mech_unwrapped_) + zero_elec_offset_;
         theta_elec_ = wrapAngle(elec);
-        sin_theta_elec_ = std::sin(theta_elec_);
-        cos_theta_elec_ = std::cos(theta_elec_);
+        sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
         motor_->electrical_angle = theta_elec_;
     } else {
         theta_elec_ = wrapAngle(static_cast<float>(sensor_dir_) * theta_mech_unwrapped_ + zero_elec_offset_);
-        sin_theta_elec_ = std::sin(theta_elec_);
-        cos_theta_elec_ = std::cos(theta_elec_);
+        sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
     }
 }
 
@@ -351,26 +401,7 @@ float ClosedLoopDriver::clamp(float value, float min_val, float max_val) const {
 }
 
 float ClosedLoopDriver::computeTorqueSetpoint() {
-    switch (ctrl_.motion_ctrl) {
-    case MotionControlType::Torque:
-        return last_target_;
-    case MotionControlType::Velocity: {
-        float vel_target = last_target_;
-        if (limits_.velocity_limit > 0.f) {
-            vel_target = clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
-        }
-        return velocityLoop(vel_target);
-    }
-    case MotionControlType::Angle: {
-        float vel_target = positionLoop(last_target_);
-        if (limits_.velocity_limit > 0.f) {
-            vel_target = clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
-        }
-        return velocityLoop(vel_target);
-    }
-    default:
-        return last_target_;
-    }
+    return (this->*setpoint_fn_)();
 }
 
 float ClosedLoopDriver::velocityLoop(float velocity_target) {
@@ -383,40 +414,12 @@ float ClosedLoopDriver::positionLoop(float position_target) {
     return position_pi_.apply(error, dt_);
 }
 
-float ClosedLoopDriver::torqueLoop(float torque_target) {
+float ClosedLoopDriver::torqueLoop(float torque_target, float v_limit) {
     torque_target_ = torque_target;
-    if (ctrl_.torque_ctrl == TorqueControlType::Current) {
-        iq_target_ = torque_target;
-        if (limits_.current_limit > 0.f) {
-            iq_target_ = clamp(iq_target_, -limits_.current_limit, limits_.current_limit);
-        }
-
-        float uq_cmd = 0.f;
-        if (current_valid_) {
-            const float error = iq_target_ - current_meas_.q;
-            uq_cmd = current_pi_.apply(error, dt_);
-        } else if (motor_ && motor_->cfg().phase_resistance > 0.f) {
-            uq_cmd = iq_target_ * motor_->cfg().phase_resistance;
-        } else {
-            uq_cmd = iq_target_;
-        }
-
-        voltage_cmd_.d = 0.f;
-        const float v_limit = computeVoltageLimit();
-        const float uq_limited = (v_limit > 0.f) ? clamp(uq_cmd, -v_limit, v_limit) : uq_cmd;
-        voltage_cmd_.q = applyVoltageSlew(uq_limited);
-        return voltage_cmd_.q;
-    }
-
-    voltage_cmd_.d = 0.f;
-    const float v_limit = computeVoltageLimit();
-    const float uq_limited = (v_limit > 0.f) ? clamp(torque_target, -v_limit, v_limit) : torque_target;
-    voltage_cmd_.q = applyVoltageSlew(uq_limited);
-    return voltage_cmd_.q;
+    return (this->*torque_loop_fn_)(torque_target, v_limit);
 }
 
-void ClosedLoopDriver::applyFOC(float uq_cmd) {
-    (void)uq_cmd; // command already stored in voltage_cmd_
+void ClosedLoopDriver::applyFOC(float active_v_limit) {
     if (!htim_ || period_ == 0u) {
         return;
     }
@@ -424,7 +427,7 @@ void ClosedLoopDriver::applyFOC(float uq_cmd) {
     const float Ud = voltage_cmd_.d;
     const float Uq = voltage_cmd_.q;
     const float vbus = (vbus_ != 0.f) ? vbus_ : VBUS_V;
-    float v_limit = v_limit_cache_;
+    float v_limit = active_v_limit;
     if (v_limit <= 0.f) {
         v_limit = (limits_.voltage_limit > 0.f) ? limits_.voltage_limit : (SVPWM_LIMIT_K * vbus);
     }
@@ -474,11 +477,15 @@ float ClosedLoopDriver::applyVoltageSlew(float requested_q) {
     return uq_prev_;
 }
 
-void ClosedLoopDriver::monitorStall() {
-    const float v_limit = computeVoltageLimit();
-    const float abs_voltage = std::fabs(voltage_cmd_.q);
-    const float abs_velocity = std::fabs(velocity_filtered_);
-    const bool saturating = (v_limit > 0.f) && (abs_voltage > 0.85f * v_limit);
+void ClosedLoopDriver::monitorStall(float v_limit) {
+    if (v_limit <= 0.f) {
+        stall_timer_ = 0.f;
+        return;
+    }
+
+    const float abs_voltage = std::abs(voltage_cmd_.q);
+    const float abs_velocity = std::abs(velocity_filtered_);
+    const bool saturating = abs_voltage > (0.85f * v_limit);
 
     if (saturating && abs_velocity < stall_velocity_threshold_) {
         stall_timer_ += dt_;
@@ -492,6 +499,82 @@ void ClosedLoopDriver::monitorStall() {
     } else {
         stall_timer_ = 0.f;
     }
+}
+
+void ClosedLoopDriver::refreshControlDispatch() {
+    switch (ctrl_.motion_ctrl) {
+    case MotionControlType::Torque:
+        setpoint_fn_ = &ClosedLoopDriver::computeSetpointTorqueMode;
+        break;
+    case MotionControlType::Velocity:
+        setpoint_fn_ = &ClosedLoopDriver::computeSetpointVelocityMode;
+        break;
+    case MotionControlType::Angle:
+        setpoint_fn_ = &ClosedLoopDriver::computeSetpointAngleMode;
+        break;
+    default:
+        setpoint_fn_ = &ClosedLoopDriver::computeSetpointFallback;
+        break;
+    }
+
+    torque_loop_fn_ = (ctrl_.torque_ctrl == TorqueControlType::Current)
+        ? &ClosedLoopDriver::torqueLoopCurrentMode
+        : &ClosedLoopDriver::torqueLoopVoltageMode;
+}
+
+float ClosedLoopDriver::computeSetpointTorqueMode() {
+    return last_target_;
+}
+
+float ClosedLoopDriver::computeSetpointVelocityMode() {
+    float vel_target = last_target_;
+    if (has_velocity_limit_) {
+        vel_target = clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
+    }
+    return velocityLoop(vel_target);
+}
+
+float ClosedLoopDriver::computeSetpointAngleMode() {
+    float vel_target = positionLoop(last_target_);
+    if (has_velocity_limit_) {
+        vel_target = clamp(vel_target, -limits_.velocity_limit, limits_.velocity_limit);
+    }
+    return velocityLoop(vel_target);
+}
+
+float ClosedLoopDriver::computeSetpointFallback() {
+    return last_target_;
+}
+
+float ClosedLoopDriver::torqueLoopVoltageMode(float torque_target, float v_limit) {
+    voltage_cmd_.d = 0.f;
+    const bool has_limit = (v_limit > 0.f);
+    const float uq_limited = has_limit ? clamp(torque_target, -v_limit, v_limit) : torque_target;
+    voltage_cmd_.q = applyVoltageSlew(uq_limited);
+    return voltage_cmd_.q;
+}
+
+float ClosedLoopDriver::torqueLoopCurrentMode(float torque_target, float v_limit) {
+    iq_target_ = torque_target;
+    if (limits_.current_limit > 0.f) {
+        iq_target_ = clamp(iq_target_, -limits_.current_limit, limits_.current_limit);
+    }
+
+    float uq_cmd = 0.f;
+    if (current_valid_) {
+        const float error = iq_target_ - current_meas_.q;
+        uq_cmd = current_pi_.apply(error, dt_);
+    } else if (motor_ && motor_->cfg().phase_resistance > 0.f) {
+        uq_cmd = iq_target_ * motor_->cfg().phase_resistance;
+    } else {
+        uq_cmd = iq_target_;
+    }
+
+    voltage_cmd_.d = 0.f;
+    const bool has_limit = (v_limit > 0.f);
+    const float uq_limited = has_limit ? clamp(uq_cmd, -v_limit, v_limit) : uq_cmd;
+    voltage_cmd_.q = applyVoltageSlew(uq_limited);
+    return voltage_cmd_.q;
 }
 
 } // namespace kinematech

@@ -29,8 +29,8 @@
 #define POLE_PAIRS      15    // Motor pole pairs
 
 // ===== Closed-loop (FOC) PI gains ========================================================
-#define FOC_VEL_KP 0.8f
-#define FOC_VEL_KI 16.0f
+#define FOC_VEL_KP 0.4f
+#define FOC_VEL_KI 18.0f
 #define FOC_POS_KP 0.0f
 #define FOC_POS_KI 0.0f
 #define FOC_CURR_KP 0.0f
