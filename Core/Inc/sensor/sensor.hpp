@@ -23,6 +23,14 @@ class Sensor {
 public:
     virtual ~Sensor() = default;
 
+    struct Sample {
+        float theta_wrapped { 0.f };
+        float theta_unwrapped { 0.f };
+        float velocity { 0.f };
+        bool has_unwrapped { false };
+        bool has_velocity { false };
+    };
+
     /// Initialize sensor hardware.
     virtual int init(float sample_hz) = 0;
 
@@ -34,6 +42,12 @@ public:
 
     /// Obtain the mechanical velocity [rad/s].
     virtual int getVelocity(float& w_mech) = 0;
+
+    /**
+     * @brief Optionally fetch a consolidated sample (angle/velocity).
+     * @return 0 se amostra preenchida; negativo caso não implementado.
+     */
+    virtual int sample(Sample& out) { (void)out; return -1; }
 };
 
 } // namespace kinematech

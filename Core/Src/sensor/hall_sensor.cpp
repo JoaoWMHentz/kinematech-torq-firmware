@@ -43,6 +43,12 @@ int HallSensor::init(float sample_hz) {
     }
   }
 
+  // Precompute mechanical deltas for each possible hall transition diff (-3..3).
+  for (int diff = -3; diff <= 3; ++diff) {
+    delta_table_[static_cast<size_t>(diff + 3)] =
+        static_cast<float>(diff) * mechanical_step_;
+  }
+
   last_sector_ = -1;
   mechanical_angle_wrapped_ = 0.f;
   mechanical_angle_unwrapped_ = 0.f;
@@ -88,14 +94,15 @@ int HallSensor::init(float sample_hz) {
 
   // Latch initial state from GPIOs so angle/sector are seeded
   last_state_ = readState();
-  if (last_state_ < state_table_.size()) {
-    last_sector_ = state_table_[last_state_];
-    if (last_sector_ >= 0) {
-      mechanical_angle_wrapped_ =
-          static_cast<float>(last_sector_) * mechanical_step_;
-      mechanical_angle_unwrapped_ = mechanical_angle_wrapped_;
-      predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
-    }
+  last_sector_ = state_table_[last_state_];
+  if (last_sector_ >= 0) {
+    mechanical_angle_wrapped_ =
+        static_cast<float>(last_sector_) * mechanical_step_;
+    mechanical_angle_unwrapped_ = mechanical_angle_wrapped_;
+    predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
+    predicted_angle_wrapped_ = mechanical_angle_wrapped_;
+  } else {
+    predicted_angle_wrapped_ = 0.f;
   }
 
   // Expose this instance for ISR and start TIM8 Hall sensor in interrupt mode
@@ -143,11 +150,12 @@ int HallSensor::update() {
   }
 
   predicted_angle_unwrapped_ = predicted;
+  predicted_angle_wrapped_ = utils::wrap_angle(predicted);
   return 0;
 }
 
 int HallSensor::getAngle(float &theta_mech) {
-  theta_mech = utils::wrap_angle(predicted_angle_unwrapped_);
+  theta_mech = predicted_angle_wrapped_;
   return 0;
 }
 
@@ -156,20 +164,19 @@ int HallSensor::getVelocity(float &w_mech) {
   return 0;
 }
 
+int HallSensor::sample(Sensor::Sample &out) {
+  out.theta_wrapped = predicted_angle_wrapped_;
+  out.theta_unwrapped = predicted_angle_unwrapped_;
+  out.velocity = mech_velocity_;
+  out.has_unwrapped = true;
+  out.has_velocity = true;
+  return 0;
+}
+
 void HallSensor::setStateTable(const std::array<int8_t, 8> &table) {
   state_table_ = table;
 }
 
-uint8_t HallSensor::readState() const {
-  const uint8_t hall_a =
-      ((pins_[0].port->IDR & pins_[0].pin) != 0u) ? 1u : 0u;
-  const uint8_t hall_b =
-      ((pins_[1].port->IDR & pins_[1].pin) != 0u) ? 1u : 0u;
-  const uint8_t hall_c =
-      ((pins_[2].port->IDR & pins_[2].pin) != 0u) ? 1u : 0u;
-
-  return static_cast<uint8_t>(hall_a | (hall_b << 1) | (hall_c << 2));
-}
 HallSensor *HallSensor::instance() { return s_instance_; }
 
 // -----------------------------------------------------------------------------
@@ -177,10 +184,6 @@ HallSensor *HallSensor::instance() { return s_instance_; }
 void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
   const uint8_t state = readState();
   last_state_ = state;
-  if (state >= state_table_.size()) {
-    return;
-  }
-
   const int sector = state_table_[state];
   if (sector < 0) {
     return; // invalid combination
@@ -207,6 +210,7 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     last_transition_tick_ms_ = uwTick;
     last_transition_dt_s_ = dt_s;
     predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
+    predicted_angle_wrapped_ = mechanical_angle_wrapped_;
     return;
   }
 
@@ -224,19 +228,29 @@ void HallSensor::onTimerEdgeIsr(uint32_t capture_ticks) {
     return;
   }
 
-  const float delta_mech = static_cast<float>(diff) * mechanical_step_;
+  const float delta_mech = delta_table_[static_cast<size_t>(diff + 3)];
   mechanical_angle_unwrapped_ += delta_mech;
-  mechanical_angle_wrapped_ = utils::wrap_angle(mechanical_angle_wrapped_ + delta_mech);
+  mechanical_angle_wrapped_ += delta_mech;
+  if (mechanical_angle_wrapped_ >= TWO_PI) {
+    mechanical_angle_wrapped_ -= TWO_PI;
+  } else if (mechanical_angle_wrapped_ < 0.f) {
+    mechanical_angle_wrapped_ += TWO_PI;
+  }
 
   float omega = (dt_s > HALL_MIN_DT_S) ? (delta_mech / dt_s) : 0.f;
   if (HALL_MAX_REASONABLE_OMEGA > 0.f) {
-    omega = utils::clamp(omega, -HALL_MAX_REASONABLE_OMEGA, HALL_MAX_REASONABLE_OMEGA);
+    if (omega > HALL_MAX_REASONABLE_OMEGA) {
+      omega = HALL_MAX_REASONABLE_OMEGA;
+    } else if (omega < -HALL_MAX_REASONABLE_OMEGA) {
+      omega = -HALL_MAX_REASONABLE_OMEGA;
+    }
   }
   mech_velocity_ = omega;
   last_transition_tick_ms_ = uwTick;
   last_transition_dt_s_ = dt_s;
   last_sector_ = sector;
   predicted_angle_unwrapped_ = mechanical_angle_unwrapped_;
+  predicted_angle_wrapped_ = mechanical_angle_wrapped_;
 }
 
 } // namespace kinematech

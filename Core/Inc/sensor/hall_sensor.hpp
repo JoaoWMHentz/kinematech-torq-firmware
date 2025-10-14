@@ -51,6 +51,7 @@ public:
     int update() override;
     int getAngle(float& theta_mech) override;
     int getVelocity(float& w_mech) override;
+    int sample(Sensor::Sample& out) override;
 
     /**
      * @brief Override the hall state → electrical sector lookup table.
@@ -79,7 +80,12 @@ public:
 private:
     void onTimerEdgeIsr(uint32_t capture_ticks);
 
-    uint8_t readState() const;
+    inline uint8_t readState() const {
+        const uint8_t hall_a = ((pins_[0].port->IDR & pins_[0].pin) != 0u) ? 1u : 0u;
+        const uint8_t hall_b = ((pins_[1].port->IDR & pins_[1].pin) != 0u) ? 1u : 0u;
+        const uint8_t hall_c = ((pins_[2].port->IDR & pins_[2].pin) != 0u) ? 1u : 0u;
+        return static_cast<uint8_t>(hall_a | (hall_b << 1) | (hall_c << 2));
+    }
 
     // Single-instance pointer for ISR dispatching
     static HallSensor* s_instance_;
@@ -101,6 +107,7 @@ private:
     float mechanical_angle_wrapped_ { 0.f };
     float mechanical_angle_unwrapped_ { 0.f };
     float predicted_angle_unwrapped_ { 0.f };
+    float predicted_angle_wrapped_ { 0.f };
     float mech_velocity_ { 0.f };
     volatile uint32_t last_transition_tick_ms_ { 0u };
     float stale_timeout_s_ { 0.0f };
@@ -111,6 +118,7 @@ private:
     uint32_t last_capture_ticks_ { 0u };
     float tick_period_s_ { 0.f }; // seconds per timer tick
     float last_transition_dt_s_ { 0.f };
+    std::array<float, 7> delta_table_ { };
 };
 
 } // namespace kinematech

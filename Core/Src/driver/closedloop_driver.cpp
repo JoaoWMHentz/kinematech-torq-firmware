@@ -269,26 +269,53 @@ void ClosedLoopDriver::sampleSensor() {
         return;
     }
 
-    // Sensor housekeeping runs in ESC_Main_Loop to keep this ISR lean.
+    bool velocity_updated = false;
 
-    // Capture mechanical angle and unwrap it so the controller stays continuous.
-    float theta = theta_mech_raw_;
-    if (sensor_->getAngle(theta) == 0) {
-        theta_mech_raw_ = theta;
-        theta_mech_unwrapped_ = unwrapAngle(theta);
+    Sensor::Sample sample { };
+    if (sensor_->sample(sample) == 0) {
+        const float prev_unwrapped = theta_mech_unwrapped_;
+
+        theta_mech_raw_ = sample.theta_wrapped;
+        if (sample.has_unwrapped) {
+            theta_mech_unwrapped_ = sample.theta_unwrapped;
+            if (sensor_ready_) {
+                theta_mech_delta_ = theta_mech_unwrapped_ - prev_unwrapped;
+            } else {
+                theta_mech_delta_ = 0.f;
+                sensor_ready_ = true;
+            }
+            theta_mech_prev_raw_ = theta_mech_raw_;
+            theta_mech_prev_unwrapped_ = theta_mech_unwrapped_;
+        } else {
+            theta_mech_unwrapped_ = unwrapAngle(theta_mech_raw_);
+        }
+
+        if (sample.has_velocity) {
+            velocity_meas_ = sample.velocity;
+            velocity_filtered_ += velocity_filter_alpha_clamped_ * (velocity_meas_ - velocity_filtered_);
+            velocity_updated = true;
+        }
+    } else {
+        float theta = theta_mech_raw_;
+        if (sensor_->getAngle(theta) == 0) {
+            theta_mech_raw_ = theta;
+            theta_mech_unwrapped_ = unwrapAngle(theta);
+        }
     }
 
-    // Prefer sensor-provided velocity; fall back to finite difference.
-    float vel = 0.f;
-    bool vel_ok = (sensor_->getVelocity(vel) == 0);
-    if (!vel_ok && sensor_ready_) {
-        vel = theta_mech_delta_ / dt_;
-        vel_ok = true;
-    }
+    if (!velocity_updated) {
+        float vel = 0.f;
+        bool vel_ok = (sensor_->getVelocity(vel) == 0);
+        if (!vel_ok && sensor_ready_ && dt_ > 0.f) {
+            vel = theta_mech_delta_ / dt_;
+            vel_ok = true;
+        }
 
-    if (vel_ok) {
-        velocity_meas_ = vel;
-        velocity_filtered_ += velocity_filter_alpha_clamped_ * (velocity_meas_ - velocity_filtered_);
+        if (vel_ok) {
+            velocity_meas_ = vel;
+            velocity_filtered_ += velocity_filter_alpha_clamped_ * (velocity_meas_ - velocity_filtered_);
+            velocity_updated = true;
+        }
     }
 
     if (motor_) {
@@ -296,15 +323,14 @@ void ClosedLoopDriver::sampleSensor() {
         motor_->mech_velocity = velocity_filtered_;
     }
 
-    // Convert mechanical angle into electrical and store it for SVPWM.
+    const float elec = static_cast<float>(sensor_dir_) *
+                           (motor_ ? Motor::elecFromMech(*motor_, theta_mech_unwrapped_)
+                                   : theta_mech_unwrapped_) +
+                       zero_elec_offset_;
+    theta_elec_ = utils::wrap_angle(elec);
+    utils::sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
     if (motor_) {
-        const float elec = static_cast<float>(sensor_dir_) * Motor::elecFromMech(*motor_, theta_mech_unwrapped_) + zero_elec_offset_;
-        theta_elec_ = utils::wrap_angle(elec);
-        utils::sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
         motor_->electrical_angle = theta_elec_;
-    } else {
-        theta_elec_ = utils::wrap_angle(static_cast<float>(sensor_dir_) * theta_mech_unwrapped_ + zero_elec_offset_);
-        utils::sincosFast(theta_elec_, sin_theta_elec_, cos_theta_elec_);
     }
 }
 
