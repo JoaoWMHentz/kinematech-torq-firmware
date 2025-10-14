@@ -114,7 +114,6 @@ int main(void)
   MX_TIM8_Init();
   MX_USB_Device_Init();
   /* USER CODE BEGIN 2 */
-  ESC_PrepareGateDrivers();
   HAL_Delay(1000);
   HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
 
@@ -200,6 +199,8 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+	HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+	HAL_Delay(100);
   }
   /* USER CODE END Error_Handler_Debug */
 }

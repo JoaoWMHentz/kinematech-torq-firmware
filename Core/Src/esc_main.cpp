@@ -18,14 +18,16 @@
 #include "esc_api.h"
 #include "tim.h"
 
+#include <array>
+#include <cstdint>
 #include <cstdio>
-
 #include "motor/motor.hpp"
 #include "sensor/hall_sensor.hpp"
 #include "sensor/encoder_i2c.hpp" // stub for future I2C encoder integration
 #include "driver/driver_openloop.hpp"
 #include "driver/driver_closedloop.hpp"
 #include "driver/driver.hpp"
+#include "utils/utils.hpp"
 
 namespace kinematech {
 
@@ -34,25 +36,6 @@ extern TIM_HandleTypeDef htim1;
 }
 
 namespace {
-
-void configureGateGpioLow(GPIO_TypeDef* port, uint16_t pin) {
-    GPIO_InitTypeDef init { };
-    init.Pin = pin;
-    init.Mode = GPIO_MODE_OUTPUT_PP;
-    init.Pull = GPIO_PULLDOWN;
-    init.Speed = GPIO_SPEED_FREQ_LOW;
-    HAL_GPIO_Init(port, &init);
-    HAL_GPIO_WritePin(port, pin, GPIO_PIN_RESET);
-}
-
-void forceAllGatePinsLow() {
-    configureGateGpioLow(PA_HIN_GPIO_Port, PA_HIN_Pin);
-    configureGateGpioLow(PB_HIN_GPIO_Port, PB_HIN_Pin);
-    configureGateGpioLow(PC_HIN_GPIO_Port, PC_HIN_Pin);
-    configureGateGpioLow(PA_LIN_GPIO_Port, PA_LIN_Pin);
-    configureGateGpioLow(PB_LIN_GPIO_Port, PB_LIN_Pin);
-    configureGateGpioLow(PC_LIN_GPIO_Port, PC_LIN_Pin);
-}
 
 } // namespace
 // -----------------------------------------------------------------------------
@@ -70,10 +53,6 @@ static ClosedLoopDriver g_cl_driver(&htim1);
 // Expose pointer for ISR dispatching.
 static Driver* g_drv_ptr = &g_cl_driver;
 
-extern "C" void ESC_PrepareGateDrivers(void) {
-    // Hold all gate-driver inputs low until the PWM module takes ownership.
-    forceAllGatePinsLow();
-}
 
 extern "C" void ESC_Main_Init(void) {
     // Restore alternate function control before enabling PWM outputs.
@@ -138,7 +117,7 @@ extern "C" void ESC_Main_Init(void) {
     // g_ol_driver.setUq(OL_UQ_V);
     // g_ol_driver.setElectricalSpeed(TWO_PI * OL_FREQ_ELEC_HZ);
     __HAL_TIM_CLEAR_FLAG(&htim1, TIM_FLAG_UPDATE);
-    __HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
+    //__HAL_TIM_ENABLE_IT(&htim1, TIM_IT_UPDATE);
 }
 
 extern "C" void ESC_Main_Loop(void) {
@@ -152,11 +131,6 @@ extern "C" void ESC_Main_Loop(void) {
     const uint32_t now_ms = HAL_GetTick();
 
     /* Service lower-rate sensor maintenance outside of the FOC ISR. */
-    static uint32_t last_sensor_update_ms = 0U;
-    if ((now_ms - last_sensor_update_ms) >= 1U) {
-        g_sensor.update();
-        last_sensor_update_ms = now_ms;
-    }
 
     if ((now_ms - last_print_ms) >= HALL_PRINT_PERIOD && true) {
 		//
@@ -182,19 +156,24 @@ extern "C" void ESC_Main_Loop(void) {
         const bool vel_rpm_negative = vel_rpm_x10 < 0;
         const long vel_rpm_abs_x10 = vel_rpm_negative ? -vel_rpm_x10 : vel_rpm_x10;
         const long vel_rpm_int = vel_rpm_abs_x10 / 10;
-        const long vel_rpm_frac = vel_rpm_abs_x10 % 10;
         const char vel_rpm_sign = vel_rpm_negative ? '-' : '+';
 
-        std::printf(
-            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s (%c%ld.%01ld rpm) teste \r\n",
+        std::array<char, 200> line {};
+        const int written = std::snprintf(
+            line.data(),
+            line.size(),
+            "HALL raw=0x%02X sector=%d theta=%ld mrad abs=%ld mrad vel=%ld mrad/s (%c%ld rpm)\r\n",
             static_cast<unsigned int>(raw),
             sector,
             theta_mrad,
             theta_abs_mrad,
-			vel_mrad,
-			vel_rpm_sign,
-			vel_rpm_int,
-			vel_rpm_frac);
+            vel_mrad,
+            vel_rpm_sign,
+            vel_rpm_int);
+
+        if (written > 0) {
+            kinematech::utils::cdc_print(line.data());
+        }
     }
 }
 extern "C" void ESC_SetVelocityTarget(float velocity_rad_s) {
