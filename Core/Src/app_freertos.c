@@ -47,14 +47,14 @@
 /* USER CODE BEGIN Variables */
 
 /* USER CODE END Variables */
-osThreadId defaultTaskHandle;
+osThreadId mainControlTaskHandle;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 
 /* USER CODE END FunctionPrototypes */
 
-void StartDefaultTask(void const * argument);
+void startMainControlTask(void const * argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -85,9 +85,9 @@ void MX_FREERTOS_Init(void) {
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+  /* definition and creation of mainControlTask */
+  osThreadDef(mainControlTask, startMainControlTask, osPriorityHigh, 0, 512);
+  mainControlTaskHandle = osThreadCreate(osThread(mainControlTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -95,24 +95,25 @@ void MX_FREERTOS_Init(void) {
 
 }
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_startMainControlTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the mainControlTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+/* USER CODE END Header_startMainControlTask */
+void startMainControlTask(void const * argument)
 {
   /* init code for USB_Device */
   MX_USB_Device_Init();
-  /* USER CODE BEGIN StartDefaultTask */
+  /* USER CODE BEGIN startMainControlTask */
   /* Infinite loop */
   for(;;)
   {
+
     osDelay(1);
   }
-  /* USER CODE END StartDefaultTask */
+  /* USER CODE END startMainControlTask */
 }
 
 /* Private application code --------------------------------------------------*/
