@@ -23,7 +23,7 @@
 							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.fpu.1354779853" name="Floating-point unit" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.fpu" useByScannerDiscovery="true" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.fpu.value.fpv4-sp-d16" valueType="enumerated"/>
 							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.floatabi.1821115178" name="Floating-point ABI" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.floatabi" useByScannerDiscovery="true" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.floatabi.value.hard" valueType="enumerated"/>
 							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.target_board.768166446" name="Board" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.target_board" useByScannerDiscovery="false" value="genericBoard" valueType="string"/>
-							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults.1691041402" name="Defaults" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults" useByScannerDiscovery="false" value="com.st.stm32cube.ide.common.services.build.inputs.revA.1.0.6 || Debug || true || Executable || com.st.stm32cube.ide.mcu.gnu.managedbuild.option.toolchain.value.workspace || STM32G473CBTx || 0 || 0 || arm-none-eabi- || ${gnu_tools_for_stm32_compiler_path} || ../Core/Inc | ../USB_Device/App | ../USB_Device/Target | ../Middlewares/Third_Party/ARM_CMSIS/CMSIS/Core/Include/ | ../Middlewares/Third_Party/ARM_CMSIS/PrivateInclude/ | ../Middlewares/Third_Party/ARM_CMSIS/Include/ | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include ||  ||  || USE_HAL_DRIVER | STM32G473xx ||  || USB_Device | Drivers | CMSIS-DSP | CMSIS | Core/Startup | Middlewares | Core ||  ||  || ${workspace_loc:/${ProjName}/STM32G473CBTX_FLASH.ld} || true || NonSecure ||  || secure_nsclib.o ||  || None ||  ||  || " valueType="string"/>
+							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults.1691041402" name="Defaults" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults" useByScannerDiscovery="false" value="com.st.stm32cube.ide.common.services.build.inputs.revA.1.0.6 || Debug || true || Executable || com.st.stm32cube.ide.mcu.gnu.managedbuild.option.toolchain.value.workspace || STM32G473CBTx || 0 || 0 || arm-none-eabi- || ${gnu_tools_for_stm32_compiler_path} || ../Core/Inc | ../USB_Device/App | ../USB_Device/Target | ../Middlewares/Third_Party/ARM_CMSIS/CMSIS/Core/Include/ | ../Middlewares/Third_Party/ARM_CMSIS/PrivateInclude/ | ../Middlewares/Third_Party/ARM_CMSIS/Include/ | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/ | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/ | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/ | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include ||  ||  || USE_HAL_DRIVER | STM32G473xx ||  || USB_Device | Drivers | CMSIS-DSP | CMSIS | Core/Startup | Middlewares | Core ||  ||  || ${workspace_loc:/${ProjName}/STM32G473CBTX_FLASH.ld} || true || NonSecure ||  || secure_nsclib.o ||  || None ||  ||  || " valueType="string"/>
 							<option id="com.st.stm32cube.ide.mcu.debug.option.cpuclock.904198316" name="Cpu clock frequence" superClass="com.st.stm32cube.ide.mcu.debug.option.cpuclock" useByScannerDiscovery="false" value="170" valueType="string"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.targetplatform.270866520" isAbstract="false" osList="all" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.targetplatform"/>
 							<builder buildPath="${workspace_loc:/kinematech-torq-firmware}/Debug" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.builder.2098084224" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.builder"/>
@@ -59,6 +59,16 @@
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1280409216" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -87,6 +97,16 @@
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp.817983942" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp"/>
 							</tool>
@@ -109,8 +129,8 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CMSIS-DSP"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="USB_Device"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CMSIS-DSP"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CMSIS"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
@@ -142,7 +162,7 @@
 							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.fpu.2065719249" name="Floating-point unit" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.fpu" useByScannerDiscovery="true" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.fpu.value.fpv4-sp-d16" valueType="enumerated"/>
 							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.floatabi.1673518731" name="Floating-point ABI" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.floatabi" useByScannerDiscovery="true" value="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.floatabi.value.hard" valueType="enumerated"/>
 							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.target_board.1000540561" name="Board" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.target_board" useByScannerDiscovery="false" value="genericBoard" valueType="string"/>
-							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults.686410096" name="Defaults" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults" useByScannerDiscovery="false" value="com.st.stm32cube.ide.common.services.build.inputs.revA.1.0.6 || Release || false || Executable || com.st.stm32cube.ide.mcu.gnu.managedbuild.option.toolchain.value.workspace || STM32G473CBTx || 0 || 0 || arm-none-eabi- || ${gnu_tools_for_stm32_compiler_path} || ../Core/Inc | ../USB_Device/App | ../USB_Device/Target | ../Middlewares/Third_Party/ARM_CMSIS/CMSIS/Core/Include/ | ../Middlewares/Third_Party/ARM_CMSIS/PrivateInclude/ | ../Middlewares/Third_Party/ARM_CMSIS/Include/ | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include ||  ||  || USE_HAL_DRIVER | STM32G473xx ||  || USB_Device | Drivers | CMSIS-DSP | CMSIS | Core/Startup | Middlewares | Core ||  ||  || ${workspace_loc:/${ProjName}/STM32G473CBTX_FLASH.ld} || true || NonSecure ||  || secure_nsclib.o ||  || None ||  ||  || " valueType="string"/>
+							<option id="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults.686410096" name="Defaults" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.option.defaults" useByScannerDiscovery="false" value="com.st.stm32cube.ide.common.services.build.inputs.revA.1.0.6 || Release || false || Executable || com.st.stm32cube.ide.mcu.gnu.managedbuild.option.toolchain.value.workspace || STM32G473CBTx || 0 || 0 || arm-none-eabi- || ${gnu_tools_for_stm32_compiler_path} || ../Core/Inc | ../USB_Device/App | ../USB_Device/Target | ../Middlewares/Third_Party/ARM_CMSIS/CMSIS/Core/Include/ | ../Middlewares/Third_Party/ARM_CMSIS/PrivateInclude/ | ../Middlewares/Third_Party/ARM_CMSIS/Include/ | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include | /home/joaoh/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/ | /home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include | /home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/ | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/ | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/ | /home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include ||  ||  || USE_HAL_DRIVER | STM32G473xx ||  || USB_Device | Drivers | CMSIS-DSP | CMSIS | Core/Startup | Middlewares | Core ||  ||  || ${workspace_loc:/${ProjName}/STM32G473CBTX_FLASH.ld} || true || NonSecure ||  || secure_nsclib.o ||  || None ||  ||  || " valueType="string"/>
 							<option id="com.st.stm32cube.ide.mcu.debug.option.cpuclock.1015798777" name="Cpu clock frequence" superClass="com.st.stm32cube.ide.mcu.debug.option.cpuclock" useByScannerDiscovery="false" value="170" valueType="string"/>
 							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.targetplatform.2112080246" isAbstract="false" osList="all" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.targetplatform"/>
 							<builder buildPath="${workspace_loc:/kinematech-torq-firmware}/Release" id="com.st.stm32cube.ide.mcu.gnu.managedbuild.builder.804030062" keepEnvironmentInBuildfile="false" managedBuildOn="true" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.builder"/>
@@ -174,6 +194,16 @@
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c.1447874307" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.c.compiler.input.c"/>
 							</tool>
@@ -201,6 +231,16 @@
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
 									<listOptionValue builtIn="false" value="/home/joaoh/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/STM32G4xx_HAL_Driver/Inc/Legacy"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Core/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Device/ST/STM32G4xx/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository/STM32Cube_FW_G4_V1.6.1/Drivers/CMSIS/Include"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS/6.2.0/CMSIS/Core/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/PrivateInclude/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include/"/>
+									<listOptionValue builtIn="false" value="/home/joaow/STM32Cube/Repository//Packs/ARM/CMSIS-DSP/1.16.2/Include"/>
 								</option>
 								<inputType id="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp.1988083708" superClass="com.st.stm32cube.ide.mcu.gnu.managedbuild.tool.cpp.compiler.input.cpp"/>
 							</tool>
@@ -223,8 +263,8 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CMSIS-DSP"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="USB_Device"/>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CMSIS-DSP"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Core"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="CMSIS"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="Middlewares"/>
@@ -302,4 +342,6 @@
 			<autodiscovery enabled="false" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 	</storageModule>
+	<storageModule moduleId="refreshScope"/>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 </cproject>
