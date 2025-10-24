@@ -99,7 +99,7 @@ void Hall_ProcessData(HallSensor_t* hall) {
         
         if (transition != 0) {
             hall->direction = (transition > 0) ? 1 : 2;  // +1=horário, -1=anti-horário
-            
+
             // Detecta quando completa uma rotação elétrica
             if (hall->last_hall_state == 6 && new_state == 1) {
                 hall->electrical_rotations++;  // Horário
@@ -107,10 +107,10 @@ void Hall_ProcessData(HallSensor_t* hall) {
                 hall->electrical_rotations--;  // Anti-horário
             }
         }
-        
+
         hall->last_hall_state = new_state;
     }
-    
+
     // Atualizar ângulo baseado na tabela
     if (hall->hall_state >= 1 && hall->hall_state <= 6) {
         hall->angle_electrical = HALL_ANGLE_TABLE[hall->hall_state];
