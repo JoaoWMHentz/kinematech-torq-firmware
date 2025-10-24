@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "hall_sensor.h"
 #include "usb_communication.h"
+#include "diagnostics.h"
 #include <stdio.h>
 /* USER CODE END Includes */
 
@@ -69,143 +70,145 @@ static void MX_NVIC_Init(void);
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
-int main(void)
-{
+ * @brief  The application entry point.
+ * @retval int
+ */
+int main(void) {
 
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
+	/* USER CODE BEGIN Init */
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_TIM1_Init();
-  MX_TIM8_Init();
-  MX_USB_Device_Init();
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_TIM1_Init();
+	MX_TIM8_Init();
+	MX_USB_Device_Init();
 
-  /* Initialize interrupts */
-  MX_NVIC_Init();
-  /* USER CODE BEGIN 2 */
-  
-  // Delay para estabilização USB
-  HAL_Delay(500);
-  
-  // Inicializar módulos
-  USB_Comm_Init();
-  Hall_Init(&hall_sensor);  // Já inicia o TIM8 Hall Interface
-  
-  USB_Comm_Print("\r\n=== KINEMATECH TORQ ESC ===\r\n");
-  USB_Comm_Print("Firmware v0.1 - Oct 2025\r\n");
-  USB_Comm_Print("Hall Interface (TIM8) - Hardware Accelerated\r\n");
-  USB_Comm_Print("System ready! Rotate motor manually.\r\n\r\n");
+	/* Initialize interrupts */
+	MX_NVIC_Init();
+	/* USER CODE BEGIN 2 */
 
-  /* USER CODE END 2 */
+	// Delay para estabilização USB
+	HAL_Delay(500);
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
-  while (1)
-  {
-    /* USER CODE END WHILE */
+	// Inicializar módulos
+	USB_Comm_Init();
+	Hall_Init(&hall_sensor);  // Já inicia o TIM8 Hall Interface
 
-    /* USER CODE BEGIN 3 */
-    
-    // ===== PROCESSAR DADOS DO HALL (main loop) =====
-    Hall_ProcessData(&hall_sensor);
-    
-    // ===== TELEMETRIA VIA USB (100Hz) =====
-    uint32_t current_time = HAL_GetTick();
-    if (current_time - last_telemetry_ms >= (1000 / TELEMETRY_RATE_HZ)) {
-      last_telemetry_ms = current_time;
-      
-      telemetry.hall_state = hall_sensor.hall_state;
-      telemetry.hall_angle = Hall_GetAngle(&hall_sensor);
-      telemetry.hall_velocity = Hall_GetVelocity(&hall_sensor);
-      telemetry.isr_counter = hall_sensor.isr_counter;  // DEBUG
-      telemetry.uptime_ms = current_time;
-      telemetry.errors = 0;
-      
-      USB_Comm_SendTelemetry(&telemetry);
-    }
+	USB_Comm_Print("\r\n=== KINEMATECH TORQ ESC ===\r\n");
+	USB_Comm_Print("Firmware v0.1 - Oct 2025\r\n");
+	USB_Comm_Print("Hall Interface (TIM8) - Hardware Accelerated\r\n");
+	USB_Comm_Print("System ready! Rotate motor manually.\r\n\r\n");
 
-    //USB_Comm_ProcessCommands();
-	__WFI();
-  }
-  /* USER CODE END 3 */
+	// Diagnóstico do TIM8
+	HAL_Delay(100);
+
+	/* USER CODE END 2 */
+
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
+	while (1) {
+		/* USER CODE END WHILE */
+		static uint32_t last_led_toggle = 0;
+		if (HAL_GetTick() - last_led_toggle >= 500) {
+			last_led_toggle = HAL_GetTick();
+			HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+		}
+		/* USER CODE BEGIN 3 */
+
+		// ===== PROCESSAR DADOS DO HALL (main loop) =====
+		Hall_ProcessData(&hall_sensor);
+
+		// ===== TELEMETRIA VIA USB (100Hz) =====
+		uint32_t current_time = HAL_GetTick();
+		if (current_time - last_telemetry_ms >= (1000 / TELEMETRY_RATE_HZ)) {
+			last_telemetry_ms = current_time;
+
+			telemetry.hall_state = hall_sensor.hall_state;
+			telemetry.hall_angle = Hall_GetAngle(&hall_sensor);
+			telemetry.hall_velocity = Hall_GetVelocity(&hall_sensor);
+			telemetry.isr_counter = hall_sensor.isr_counter;  // DEBUG
+			telemetry.uptime_ms = current_time;
+			telemetry.errors = 0;
+			//TIM8_PrintDiagnostics();
+			USB_Comm_SendTelemetry(&telemetry);
+		}
+
+		//USB_Comm_ProcessCommands();
+		__WFI();
+	}
+	/* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
-void SystemClock_Config(void)
-{
-  RCC_OscInitTypeDef RCC_OscInitStruct = {0};
-  RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+ * @brief System Clock Configuration
+ * @retval None
+ */
+void SystemClock_Config(void) {
+	RCC_OscInitTypeDef RCC_OscInitStruct = { 0 };
+	RCC_ClkInitTypeDef RCC_ClkInitStruct = { 0 };
 
-  /** Configure the main internal regulator output voltage
-  */
-  HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
+	/** Configure the main internal regulator output voltage
+	 */
+	HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
 
-  /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48|RCC_OSCILLATORTYPE_HSE;
-  RCC_OscInitStruct.HSEState = RCC_HSE_ON;
-  RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV6;
-  RCC_OscInitStruct.PLL.PLLN = 85;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
-  RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
-  RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
-  if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	/** Initializes the RCC Oscillators according to the specified parameters
+	 * in the RCC_OscInitTypeDef structure.
+	 */
+	RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI48
+			| RCC_OSCILLATORTYPE_HSE;
+	RCC_OscInitStruct.HSEState = RCC_HSE_ON;
+	RCC_OscInitStruct.HSI48State = RCC_HSI48_ON;
+	RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+	RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+	RCC_OscInitStruct.PLL.PLLM = RCC_PLLM_DIV6;
+	RCC_OscInitStruct.PLL.PLLN = 85;
+	RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+	RCC_OscInitStruct.PLL.PLLQ = RCC_PLLQ_DIV2;
+	RCC_OscInitStruct.PLL.PLLR = RCC_PLLR_DIV2;
+	if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
+		Error_Handler();
+	}
 
-  /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
-  RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
-  RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
+	/** Initializes the CPU, AHB and APB buses clocks
+	 */
+	RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
+			| RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+	RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+	RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+	RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+	RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_4) != HAL_OK) {
+		Error_Handler();
+	}
 }
 
 /**
-  * @brief NVIC Configuration.
-  * @retval None
-  */
-static void MX_NVIC_Init(void)
-{
-  /* USB_LP_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USB_LP_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(USB_LP_IRQn);
+ * @brief NVIC Configuration.
+ * @retval None
+ */
+static void MX_NVIC_Init(void) {
+	/* USB_LP_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(USB_LP_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(USB_LP_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -215,54 +218,71 @@ static void MX_NVIC_Init(void)
 extern HallSensor_t hall_sensor;
 
 /**
- * @brief Callback de captura do TIM8 (Hall Interface)
- * @note Chamado automaticamente pelo HAL a cada transição Hall
+ * @brief Callback de Commutation do TIM8 (Hall Interface)
  */
-void HAL_TIMEx_CommutCallback(TIM_HandleTypeDef *htim)
-{
-    if (htim->Instance == TIM8) {
-        // ISR ultra rápida: apenas capturar dados
-        Hall_TIM_CaptureCallback(&hall_sensor);
-    }
+void HAL_TIMEx_CommutCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM8) {
+		hall_sensor.isr_counter++;
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+		Hall_TIM_CaptureCallback(&hall_sensor);
+	}
+}
+
+/**
+ * @brief Callback de Capture/Compare 1 do TIM8
+ */
+void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM8) {
+		hall_sensor.isr_counter++;
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+		Hall_TIM_CaptureCallback(&hall_sensor);
+	}
+}
+
+/**
+ * @brief Callback de Trigger do TIM8 (edge detection)
+ */
+void HAL_TIM_TriggerCallback(TIM_HandleTypeDef *htim) {
+	if (htim->Instance == TIM8) {
+		hall_sensor.isr_counter++;
+		HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);
+		Hall_TIM_CaptureCallback(&hall_sensor);
+	}
 }
 
 /* USER CODE END 4 */
 
 /**
-  * @brief  Period elapsed callback in non blocking mode
-  * @note   This function is called  when TIM2 interrupt took place, inside
-  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
-  * a global variable "uwTick" used as application time base.
-  * @param  htim : TIM handle
-  * @retval None
-  */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
-{
-  /* USER CODE BEGIN Callback 0 */
+ * @brief  Period elapsed callback in non blocking mode
+ * @note   This function is called  when TIM2 interrupt took place, inside
+ * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+ * a global variable "uwTick" used as application time base.
+ * @param  htim : TIM handle
+ * @retval None
+ */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+	/* USER CODE BEGIN Callback 0 */
 
-  /* USER CODE END Callback 0 */
-  if (htim->Instance == TIM2)
-  {
-    HAL_IncTick();
-  }
-  /* USER CODE BEGIN Callback 1 */
+	/* USER CODE END Callback 0 */
+	if (htim->Instance == TIM2) {
+		HAL_IncTick();
+	}
+	/* USER CODE BEGIN Callback 1 */
 
-  /* USER CODE END Callback 1 */
+	/* USER CODE END Callback 1 */
 }
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
-void Error_Handler(void)
-{
-  /* USER CODE BEGIN Error_Handler_Debug */
-  /* User can add his own implementation to report the HAL error return state */
-  __disable_irq();
-  while (1)
-  {
-  }
-  /* USER CODE END Error_Handler_Debug */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
+void Error_Handler(void) {
+	/* USER CODE BEGIN Error_Handler_Debug */
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1) {
+	}
+	/* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT
 /**

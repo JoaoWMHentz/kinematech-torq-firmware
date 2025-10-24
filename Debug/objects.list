@@ -1,3 +1,4 @@
+"./Core/Src/diagnostics.o"
 "./Core/Src/gpio.o"
 "./Core/Src/hall_sensor.o"
 "./Core/Src/main.o"

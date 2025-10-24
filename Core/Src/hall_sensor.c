@@ -66,6 +66,13 @@ void Hall_Init(HallSensor_t* hall) {
     
     // Iniciar TIM8 em modo Hall Sensor com interrupção
     HAL_TIMEx_HallSensor_Start_IT(&htim8);
+    
+    // ===== FIX CRÍTICO: Habilitar TODAS as interrupções possíveis para debug =====
+    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_CC1);    // Capture/Compare 1 (já habilitado pela HAL)
+    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_CC2);    // Capture/Compare 2 (usado pelo commutation)
+    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_TRIGGER); // Trigger (edge detection)
+    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_COM);    // Commutation event
+    __HAL_TIM_ENABLE_IT(&htim8, TIM_IT_UPDATE); // Counter overflow (pode ajudar no debug)
 }
 
 uint8_t Hall_ReadState(void) {
@@ -134,9 +141,8 @@ void Hall_TIM_CaptureCallback(HallSensor_t* hall) {
     // ===== ISR ULTRA RÁPIDA (executada a cada transição Hall) =====
     // Objetivo: capturar dados e sair imediatamente (~1-2μs)
     
-    // DEBUG: incrementar contador de ISR e piscar LED
-    hall->isr_counter++;
-    HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);  // DEBUG: LED pisca a cada transição
+    // DEBUG: LED já piscado na callback do main.c
+    // Não duplicar aqui para evitar overhead
     
     // 1. Ler estado Hall atual
     hall->hall_state = Hall_ReadState();
