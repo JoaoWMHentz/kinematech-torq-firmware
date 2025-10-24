@@ -26,7 +26,7 @@
 
 /* ========== CONTROL LOOP TIMING ========== */
 #define FOC_LOOP_FREQUENCY_HZ   20000  // 20kHz - Loop de controle FOC
-#define TELEMETRY_RATE_HZ       20    // 100Hz - Taxa de envio USB
+#define TELEMETRY_RATE_HZ       5    // 100Hz - Taxa de envio USB
 
 /* ========== CURRENT SENSING (INA240) ========== */
 #define CURRENT_SENSE_GAIN      20.0f  // Ganho do INA240 (V/V)

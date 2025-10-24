@@ -9,9 +9,17 @@
 #include "config.h"
 #include "tim.h"
 
+/* Mapeamento de estado físico → setor lógico (1-6)
+ * Sequência física: 1→5→4→6→2→3→1
+ * Sequência lógica: 1→2→3→4→5→6→1
+ * 
+ * Exemplo: Estado físico 5 = Setor 2
+ */
+
+
 /* Tabela de ângulos elétricos para cada estado Hall (6-step)
  * Estado Hall: HallC | HallB | HallA
- * Sequência observada: 1→3→2→6→4→5→1 (rotação horária)
+ * Sequência observada: 1→5→4→6→2→3→1 (rotação horária)
  * Ângulos em radianos (0 a 2π)
  * 
  * TODO: Implementar mapeamento automático no futuro
@@ -21,29 +29,29 @@
  *       - Armazenar mapeamento em EEPROM/Flash
  */
 static const float HALL_ANGLE_TABLE[8] = {
-	0.0f,                    // 0b000 - Estado inválido
-	0.0f,                    // 0b001 - 0°
-	M_PI / 3.0f,             // 0b010 - 60°
-	M_PI / 6.0f,             // 0b011 - 30°
-	2.0f * M_PI / 3.0f,      // 0b100 - 120°
-	5.0f * M_PI / 6.0f,      // 0b101 - 150°
-	4.0f * M_PI / 3.0f,      // 0b110 - 240°
-	0.0f                     // 0b111 - Estado inválido
+    0.0f,           // 0b000 - Estado inválido
+    0.0f,           // 0b001 (H:1) - 0° (0 rad)
+    FOUR_PI_DIV_3,  // 0b010 (H:2) - 240° (4π/3 rad)
+    FIVE_PI_DIV_3,  // 0b011 (H:3) - 300° (5π/3 rad)
+    TWO_PI_DIV_3,   // 0b100 (H:4) - 120° (2π/3 rad)
+    PI_DIV_3,       // 0b101 (H:5) - 60° (π/3 rad)
+    PI,             // 0b110 (H:6) - 180° (π rad)
+    0.0f            // 0b111 - Estado inválido
 };
 
 /* Tabela de transições válidas (detecta direção)
- * Sequência horária: 1→3→2→6→4→5→1
+ * Sequência horária: 1→5→4→6→2→3→1
  * +1 = horário, -1 = anti-horário, 0 = inválido
  */
 static const int8_t HALL_TRANSITION_TABLE[8][8] = {
 //   0   1   2   3   4   5   6   7
     {0,  0,  0,  0,  0,  0,  0,  0}, // De 0 (inválido)
-    {0,  0,  1,  0, -1,  0,  0,  0}, // De 1
-    {0, -1,  0,  1,  0,  0,  0,  0}, // De 2
-    {0,  0, -1,  0,  1,  0,  0,  0}, // De 3
-    {0,  1,  0, -1,  0,  1,  0,  0}, // De 4
-    {0,  0,  0,  0, -1,  0,  1,  0}, // De 5
-    {0,  0,  0,  0,  0, -1,  0,  1}, // De 6
+    {0,  0,  0, -1,  0,  1,  0,  0}, // De 1: próximo=5(horário), anterior=3(anti-horário)
+    {0,  0,  0,  1,  0,  0, -1,  0}, // De 2: próximo=3(horário), anterior=6(anti-horário)
+    {0,  1, -1,  0,  0,  0,  0,  0}, // De 3: próximo=1(horário), anterior=2(anti-horário)
+    {0,  0,  0,  0,  0, -1,  1,  0}, // De 4: próximo=6(horário), anterior=5(anti-horário)
+    {0, -1,  0,  0,  1,  0,  0,  0}, // De 5: próximo=4(horário), anterior=1(anti-horário)
+    {0,  0,  1,  0, -1,  0,  0,  0}, // De 6: próximo=2(horário), anterior=4(anti-horário)
     {0,  0,  0,  0,  0,  0,  0,  0}  // De 7 (inválido)
 };
 
