@@ -1,6 +1,0 @@
-../Core/Src/hall_sensor.c:46:6:Hall_Init	3
-../Core/Src/hall_sensor.c:77:9:Hall_ReadState	4
-../Core/Src/hall_sensor.c:89:6:Hall_ProcessData	15
-../Core/Src/hall_sensor.c:139:6:Hall_TIM_CaptureCallback	1
-../Core/Src/hall_sensor.c:159:7:Hall_GetAngle	1
-../Core/Src/hall_sensor.c:163:7:Hall_GetVelocity	1

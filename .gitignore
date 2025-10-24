@@ -3,4 +3,9 @@
 build/
 Debug/
 Release/
-.vscode/
+.VSCodeCounter/
+.vscode
+.mxproject
+.settings/
+Middlewares/
+Drivers/

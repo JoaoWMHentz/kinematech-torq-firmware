@@ -1,5 +1,0 @@
-../Core/Src/usb_communication.c:22:6:USB_Comm_Init	8	static
-../Core/Src/usb_communication.c:28:6:USB_Comm_SendTelemetry	40	static
-../Core/Src/usb_communication.c:45:6:USB_Comm_Print	16	static
-../Core/Src/usb_communication.c:49:6:USB_Comm_Printf	16	static
-../Core/Src/usb_communication.c:58:6:USB_Comm_ProcessCommands	4	static
