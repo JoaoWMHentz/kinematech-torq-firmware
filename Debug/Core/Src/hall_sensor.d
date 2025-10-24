@@ -30,7 +30,7 @@ Core/Src/hall_sensor.o: ../Core/Src/hall_sensor.c \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_pwr_ex.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim.h \
  ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h \
- ../Core/Inc/config.h ../Core/Inc/tim.h
+ ../Core/Inc/config.h ../Core/Inc/tim.h ../Core/Inc/definitions.h
 ../Core/Inc/hall_sensor.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal.h:
@@ -65,3 +65,4 @@ Core/Src/hall_sensor.o: ../Core/Src/hall_sensor.c \
 ../Drivers/STM32G4xx_HAL_Driver/Inc/stm32g4xx_hal_tim_ex.h:
 ../Core/Inc/config.h:
 ../Core/Inc/tim.h:
+../Core/Inc/definitions.h:

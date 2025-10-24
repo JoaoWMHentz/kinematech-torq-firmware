@@ -127,13 +127,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     
-    // LED pisca a cada 500ms para indicar que está funcionando
-    static uint32_t last_led_toggle = 0;
-    if (HAL_GetTick() - last_led_toggle >= 500) {
-      last_led_toggle = HAL_GetTick();
-      HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
-    }
-    
     // ===== PROCESSAR DADOS DO HALL (main loop) =====
     Hall_ProcessData(&hall_sensor);
     
@@ -152,9 +145,8 @@ int main(void)
       USB_Comm_SendTelemetry(&telemetry);
     }
 
-    USB_Comm_ProcessCommands();
-    
-    HAL_Delay(100);
+    //USB_Comm_ProcessCommands();
+	__WFI();
   }
   /* USER CODE END 3 */
 }

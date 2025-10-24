@@ -75,14 +75,14 @@ void Error_Handler(void);
 #define PC_HIN_GPIO_Port GPIOA
 #define ENCODER_SCL_Pin GPIO_PIN_15
 #define ENCODER_SCL_GPIO_Port GPIOA
-#define HALL_A_Pin_Pin GPIO_PIN_6
-#define HALL_A_Pin_GPIO_Port GPIOB
+#define HALL_A_Pin GPIO_PIN_6
+#define HALL_A_GPIO_Port GPIOB
 #define ENCODER_SDA_Pin GPIO_PIN_7
 #define ENCODER_SDA_GPIO_Port GPIOB
-#define HALL_B_Pin_Pin GPIO_PIN_8
-#define HALL_B_Pin_GPIO_Port GPIOB
-#define HALL_C_Pin_Pin GPIO_PIN_9
-#define HALL_C_Pin_GPIO_Port GPIOB
+#define HALL_B_Pin GPIO_PIN_8
+#define HALL_B_GPIO_Port GPIOB
+#define HALL_C_Pin GPIO_PIN_9
+#define HALL_C_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

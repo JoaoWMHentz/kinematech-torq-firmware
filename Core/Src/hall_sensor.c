@@ -9,6 +9,7 @@
 #include "config.h"
 #include "tim.h"
 #include <math.h>
+#include <definitions.h>
 
 /* Tabela de ângulos elétricos para cada estado Hall (6-step)
  * Estado Hall: HallC | HallB | HallA
@@ -133,8 +134,9 @@ void Hall_TIM_CaptureCallback(HallSensor_t* hall) {
     // ===== ISR ULTRA RÁPIDA (executada a cada transição Hall) =====
     // Objetivo: capturar dados e sair imediatamente (~1-2μs)
     
-    // DEBUG: incrementar contador de ISR
+    // DEBUG: incrementar contador de ISR e piscar LED
     hall->isr_counter++;
+    HAL_GPIO_TogglePin(LED_RED_GPIO_Port, LED_RED_Pin);  // DEBUG: LED pisca a cada transição
     
     // 1. Ler estado Hall atual
     hall->hall_state = Hall_ReadState();

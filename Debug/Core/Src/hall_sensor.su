@@ -1,0 +1,6 @@
+../Core/Src/hall_sensor.c:46:6:Hall_Init	16	static
+../Core/Src/hall_sensor.c:71:9:Hall_ReadState	16	static
+../Core/Src/hall_sensor.c:83:6:Hall_ProcessData	32	static
+../Core/Src/hall_sensor.c:133:6:Hall_TIM_CaptureCallback	16	static
+../Core/Src/hall_sensor.c:153:7:Hall_GetAngle	16	static
+../Core/Src/hall_sensor.c:157:7:Hall_GetVelocity	16	static
