@@ -19,4 +19,6 @@ Drivers/
 CMakeFiles/
 cmake-build-*/
 *.cmake
-!CMakeLists.txt
+CMakeLists.txt
+CMakePresets.json
+vcpkg-configurations.json
