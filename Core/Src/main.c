@@ -18,14 +18,16 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
 #include "tim.h"
 #include "usb_device.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "config.h"
+#include "hall_sensor.h"
+#include "usb_communication.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,12 +48,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+// Instâncias globais dos módulos
+HallSensor_t hall_sensor;
+Telemetry_t telemetry;
 
+// Controle de timing
+uint32_t last_telemetry_ms = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-void MX_FREERTOS_Init(void);
+static void MX_NVIC_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -92,17 +99,25 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   MX_TIM8_Init();
+  MX_USB_Device_Init();
+
+  /* Initialize interrupts */
+  MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
+  
+  // Delay para estabilização USB
+  HAL_Delay(500);
+  
+  // Inicializar módulos
+  USB_Comm_Init();
+  Hall_Init(&hall_sensor);  // Já inicia o TIM8 Hall Interface
+  
+  USB_Comm_Print("\r\n=== KINEMATECH TORQ ESC ===\r\n");
+  USB_Comm_Print("Firmware v0.1 - Oct 2025\r\n");
+  USB_Comm_Print("Hall Interface (TIM8) - Hardware Accelerated\r\n");
+  USB_Comm_Print("System ready! Rotate motor manually.\r\n\r\n");
 
   /* USER CODE END 2 */
-
-  /* Call init function for freertos objects (in cmsis_os2.c) */
-  MX_FREERTOS_Init();
-
-  /* Start scheduler */
-  osKernelStart();
-
-  /* We should never get here as control is now taken by the scheduler */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -111,6 +126,27 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+    
+    // ===== PROCESSAR DADOS DO HALL (main loop) =====
+    Hall_ProcessData(&hall_sensor);
+    
+    // ===== TELEMETRIA VIA USB (100Hz) =====
+    uint32_t current_time = HAL_GetTick();
+    if (current_time - last_telemetry_ms >= (1000 / TELEMETRY_RATE_HZ)) {
+      last_telemetry_ms = current_time;
+      
+      telemetry.hall_state = hall_sensor.hall_state;
+      telemetry.hall_angle = Hall_GetAngle(&hall_sensor);
+      telemetry.hall_velocity = Hall_GetVelocity(&hall_sensor);
+      telemetry.uptime_ms = current_time;
+      telemetry.errors = 0;
+      
+      USB_Comm_SendTelemetry(&telemetry);
+    }
+
+    USB_Comm_ProcessCommands();
+    
+    HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }
@@ -161,7 +197,34 @@ void SystemClock_Config(void)
   }
 }
 
+/**
+  * @brief NVIC Configuration.
+  * @retval None
+  */
+static void MX_NVIC_Init(void)
+{
+  /* USB_LP_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(USB_LP_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(USB_LP_IRQn);
+}
+
 /* USER CODE BEGIN 4 */
+
+// ===== CALLBACK TIM8 HALL INTERFACE =====
+// Declaração externa da instância global do hall_sensor
+extern HallSensor_t hall_sensor;
+
+/**
+ * @brief Callback de captura do TIM8 (Hall Interface)
+ * @note Chamado automaticamente pelo HAL a cada transição Hall
+ */
+void HAL_TIMEx_CommutCallback(TIM_HandleTypeDef *htim)
+{
+    if (htim->Instance == TIM8) {
+        // ISR ultra rápida: apenas capturar dados
+        Hall_TIM_CaptureCallback(&hall_sensor);
+    }
+}
 
 /* USER CODE END 4 */
 
