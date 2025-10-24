@@ -3,9 +3,20 @@
 build/
 Debug/
 Release/
+
+# IDE specific
 .VSCodeCounter/
-.vscode
+.vs/
+.vscode/
 .mxproject
 .settings/
+
+# STM32 HAL/Middleware (auto-generated)
 Middlewares/
 Drivers/
+
+# CMake
+CMakeFiles/
+cmake-build-*/
+*.cmake
+!CMakeLists.txt
