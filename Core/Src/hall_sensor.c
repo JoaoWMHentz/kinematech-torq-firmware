@@ -52,10 +52,16 @@ void Hall_Init(HallSensor_t* hall) {
     hall->hall_capture = 0;
     hall->last_capture = 0;
     hall->new_capture_flag = 0;
+    hall->isr_counter = 0;  // DEBUG: inicializar contador
     
     // Leitura inicial do estado Hall
     hall->hall_state = Hall_ReadState();
     hall->last_hall_state = hall->hall_state;
+    
+    // Setar ângulo inicial baseado no estado Hall atual
+    if (hall->hall_state >= 1 && hall->hall_state <= 6) {
+        hall->angle_electrical = HALL_ANGLE_TABLE[hall->hall_state];
+    }
     
     // Iniciar TIM8 em modo Hall Sensor com interrupção
     HAL_TIMEx_HallSensor_Start_IT(&htim8);
@@ -126,6 +132,9 @@ void Hall_ProcessData(HallSensor_t* hall) {
 void Hall_TIM_CaptureCallback(HallSensor_t* hall) {
     // ===== ISR ULTRA RÁPIDA (executada a cada transição Hall) =====
     // Objetivo: capturar dados e sair imediatamente (~1-2μs)
+    
+    // DEBUG: incrementar contador de ISR
+    hall->isr_counter++;
     
     // 1. Ler estado Hall atual
     hall->hall_state = Hall_ReadState();

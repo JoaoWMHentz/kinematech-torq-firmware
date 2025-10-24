@@ -26,12 +26,17 @@ void USB_Comm_Init(void) {
 }
 
 void USB_Comm_SendTelemetry(Telemetry_t* telem) {
-    // Formato CSV simplificado para teste de Hall
+    // Formato CSV simplificado - usando inteiros para evitar problema com float/printf
+    // Ang e Vel multiplicados por 100 para manter 2 casas decimais
+    int32_t ang_int = (int32_t)(telem->hall_angle * 100.0f);
+    int32_t vel_int = (int32_t)(telem->hall_velocity * 10.0f);
+    
     snprintf(usb_tx_buffer, sizeof(usb_tx_buffer),
-             "H:%d,Ang:%.2f,Vel:%.0f,Time:%lu\n",
+             "H:%d,Ang:%ld,Vel:%ld,ISR:%lu,Time:%lu\r\n",
              telem->hall_state,
-             telem->hall_angle,
-             telem->hall_velocity,
+             ang_int,      // Ângulo x100 (ex: 1.05 rad -> 105)
+             vel_int,      // Velocidade x10 (ex: 123.4 eRPM -> 1234)
+             telem->isr_counter,  // DEBUG: contador de ISR
              telem->uptime_ms);
     
     CDC_Transmit_FS((uint8_t*)usb_tx_buffer, strlen(usb_tx_buffer));

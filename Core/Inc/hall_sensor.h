@@ -18,7 +18,7 @@ typedef struct {
     volatile uint32_t hall_capture;       // Valor capturado do TIM8 counter
     volatile uint32_t last_capture;       // Capture anterior
     volatile uint8_t new_capture_flag;    // Flag: nova transição detectada
-    
+    volatile uint32_t isr_counter;
     // Software state (processado no main loop)
     uint8_t last_hall_state;              // Estado anterior
     int32_t electrical_rotations;         // Contador de rotações elétricas

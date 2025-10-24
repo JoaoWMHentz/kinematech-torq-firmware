@@ -17,6 +17,7 @@ typedef struct {
     uint8_t hall_state;
     float   hall_angle;
     float   hall_velocity;
+    uint32_t isr_counter;  // DEBUG: contador de ISR
     
     // Estado
     uint32_t uptime_ms;

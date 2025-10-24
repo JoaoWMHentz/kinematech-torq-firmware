@@ -127,6 +127,13 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     
+    // LED pisca a cada 500ms para indicar que está funcionando
+    static uint32_t last_led_toggle = 0;
+    if (HAL_GetTick() - last_led_toggle >= 500) {
+      last_led_toggle = HAL_GetTick();
+      HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin);
+    }
+    
     // ===== PROCESSAR DADOS DO HALL (main loop) =====
     Hall_ProcessData(&hall_sensor);
     
@@ -138,6 +145,7 @@ int main(void)
       telemetry.hall_state = hall_sensor.hall_state;
       telemetry.hall_angle = Hall_GetAngle(&hall_sensor);
       telemetry.hall_velocity = Hall_GetVelocity(&hall_sensor);
+      telemetry.isr_counter = hall_sensor.isr_counter;  // DEBUG
       telemetry.uptime_ms = current_time;
       telemetry.errors = 0;
       
@@ -146,7 +154,7 @@ int main(void)
 
     USB_Comm_ProcessCommands();
     
-    HAL_Delay(1);
+    HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
