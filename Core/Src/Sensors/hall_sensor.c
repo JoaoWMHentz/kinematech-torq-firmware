@@ -5,7 +5,7 @@
  * Created on: Oct 23, 2025
  */
 
-#include "hall_sensor.h"
+#include <Sensors/hall_sensor.h>
 #include "config.h"
 #include "tim.h"
 

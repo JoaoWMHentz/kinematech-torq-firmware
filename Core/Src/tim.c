@@ -210,9 +210,6 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     GPIO_InitStruct.Alternate = GPIO_AF10_TIM8;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-    /* TIM8 interrupt Init */
-    HAL_NVIC_SetPriority(TIM8_CC_IRQn, 2, 0);
-    HAL_NVIC_EnableIRQ(TIM8_CC_IRQn);
   /* USER CODE BEGIN TIM8_MspInit 1 */
 
   /* USER CODE END TIM8_MspInit 1 */

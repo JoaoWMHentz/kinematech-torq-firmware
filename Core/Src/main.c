@@ -25,9 +25,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "config.h"
-#include "hall_sensor.h"
 #include "usb_communication.h"
 #include <stdio.h>
+#include <Sensors/hall_sensor.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -204,6 +204,9 @@ static void MX_NVIC_Init(void)
   /* USB_LP_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(USB_LP_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(USB_LP_IRQn);
+  /* TIM8_CC_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(TIM8_CC_IRQn, 2, 0);
+  HAL_NVIC_EnableIRQ(TIM8_CC_IRQn);
 }
 
 /* USER CODE BEGIN 4 */

@@ -5,8 +5,8 @@
  * Created on: Oct 23, 2025
  */
 
-#ifndef INC_HALL_SENSOR_H_
-#define INC_HALL_SENSOR_H_
+#ifndef INC_SENSORS_HALL_SENSOR_H_
+#define INC_SENSORS_HALL_SENSOR_H_
 
 #include "main.h"
 #include <stdint.h>
@@ -50,4 +50,4 @@ float Hall_GetVelocity(HallSensor_t* hall);
 // Retorna o setor lógico sequencial (1-6)
 uint8_t Hall_GetSector(HallSensor_t* hall);
 
-#endif /* INC_HALL_SENSOR_H_ */
+#endif /* INC_SENSORS_HALL_SENSOR_H_ */
