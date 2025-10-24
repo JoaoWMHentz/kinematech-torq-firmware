@@ -13,9 +13,20 @@
 /* ========== MOTOR PARAMETERS ========== */
 #define MOTOR_POLE_PAIRS        7      // Número de pares de polos
 
+/* ========== MATH CONSTANTS ========== */
+#define PI                      3.14159265358979323846f
+#define TWO_PI                  6.28318530717958647692f
+#define PI_DIV_2                1.57079632679489661923f  // π/2
+#define PI_DIV_3                1.04719755119659774615f  // π/3
+#define PI_DIV_6                0.52359877559829887308f  // π/6
+#define TWO_PI_DIV_3            2.09439510239319549230f  // 2π/3
+#define FOUR_PI_DIV_3           4.18879020478639098461f  // 4π/3
+#define FIVE_PI_DIV_3           5.23598775598298873077f  // 5π/3
+#define FIVE_PI_DIV_6           2.61799387799149436538f  // 5π/6
+
 /* ========== CONTROL LOOP TIMING ========== */
 #define FOC_LOOP_FREQUENCY_HZ   20000  // 20kHz - Loop de controle FOC
-#define TELEMETRY_RATE_HZ       100    // 100Hz - Taxa de envio USB
+#define TELEMETRY_RATE_HZ       20    // 100Hz - Taxa de envio USB
 
 /* ========== CURRENT SENSING (INA240) ========== */
 #define CURRENT_SENSE_GAIN      20.0f  // Ganho do INA240 (V/V)
