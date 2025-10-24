@@ -9,50 +9,37 @@
 #include "config.h"
 #include "tim.h"
 
-/* Mapeamento de estado físico → setor lógico (1-6)
- * Sequência física: 1→5→4→6→2→3→1
- * Sequência lógica: 1→2→3→4→5→6→1
- * 
- * Exemplo: Estado físico 5 = Setor 2
- */
-
-
-/* Tabela de ângulos elétricos para cada estado Hall (6-step)
- * Estado Hall: HallC | HallB | HallA
- * Sequência observada: 1→5→4→6→2→3→1 (rotação horária)
- * Ângulos em radianos (0 a 2π)
- * 
- * TODO: Implementar mapeamento automático no futuro
- *       - Girar motor em velocidade constante
- *       - Detectar sequência de transições
- *       - Calcular ângulos automaticamente
- *       - Armazenar mapeamento em EEPROM/Flash
- */
-static const float HALL_ANGLE_TABLE[8] = {
-    0.0f,           // 0b000 - Estado inválido
-    0.0f,           // 0b001 (H:1) - 0° (0 rad)
-    FOUR_PI_DIV_3,  // 0b010 (H:2) - 240° (4π/3 rad)
-    FIVE_PI_DIV_3,  // 0b011 (H:3) - 300° (5π/3 rad)
-    TWO_PI_DIV_3,   // 0b100 (H:4) - 120° (2π/3 rad)
-    PI_DIV_3,       // 0b101 (H:5) - 60° (π/3 rad)
-    PI,             // 0b110 (H:6) - 180° (π rad)
-    0.0f            // 0b111 - Estado inválido
+// Mapeamento de estado físico → setor lógico (1-6)
+// Sequência física: 1→5→4→6→2→3→1
+// Sequência lógica: 1→2→3→4→5→6→1
+static const uint8_t HALL_STATE_TO_SECTOR[8] = {
+    0, 1, 5, 6, 3, 2, 4, 0  // [0]=inv, [1]=1, [2]=5, [3]=6, [4]=3, [5]=2, [6]=4, [7]=inv
 };
 
-/* Tabela de transições válidas (detecta direção)
- * Sequência horária: 1→5→4→6→2→3→1
- * +1 = horário, -1 = anti-horário, 0 = inválido
- */
+// Tabela de ângulos elétricos (0 a 2π)
+// Sequência: 1→5→4→6→2→3→1 (rotação horária)
+// TODO: Implementar auto-calibração futura
+static const float HALL_ANGLE_TABLE[8] = {
+    0.0f,           // 0b000 - inválido
+    0.0f,           // 0b001 (H:1) - 0°
+    FOUR_PI_DIV_3,  // 0b010 (H:2) - 240°
+    FIVE_PI_DIV_3,  // 0b011 (H:3) - 300°
+    TWO_PI_DIV_3,   // 0b100 (H:4) - 120°
+    PI_DIV_3,       // 0b101 (H:5) - 60°
+    PI,             // 0b110 (H:6) - 180°
+    0.0f            // 0b111 - inválido
+};
+
+// Detecta direção: +1=horário, -1=anti-horário, 0=inválido
 static const int8_t HALL_TRANSITION_TABLE[8][8] = {
-//   0   1   2   3   4   5   6   7
-    {0,  0,  0,  0,  0,  0,  0,  0}, // De 0 (inválido)
-    {0,  0,  0, -1,  0,  1,  0,  0}, // De 1: próximo=5(horário), anterior=3(anti-horário)
-    {0,  0,  0,  1,  0,  0, -1,  0}, // De 2: próximo=3(horário), anterior=6(anti-horário)
-    {0,  1, -1,  0,  0,  0,  0,  0}, // De 3: próximo=1(horário), anterior=2(anti-horário)
-    {0,  0,  0,  0,  0, -1,  1,  0}, // De 4: próximo=6(horário), anterior=5(anti-horário)
-    {0, -1,  0,  0,  1,  0,  0,  0}, // De 5: próximo=4(horário), anterior=1(anti-horário)
-    {0,  0,  1,  0, -1,  0,  0,  0}, // De 6: próximo=2(horário), anterior=4(anti-horário)
-    {0,  0,  0,  0,  0,  0,  0,  0}  // De 7 (inválido)
+    {0,  0,  0,  0,  0,  0,  0,  0}, // De 0
+    {0,  0,  0, -1,  0,  1,  0,  0}, // De 1: próx=5, ant=3
+    {0,  0,  0,  1,  0,  0, -1,  0}, // De 2: próx=3, ant=6
+    {0,  1, -1,  0,  0,  0,  0,  0}, // De 3: próx=1, ant=2
+    {0,  0,  0,  0,  0, -1,  1,  0}, // De 4: próx=6, ant=5
+    {0, -1,  0,  0,  1,  0,  0,  0}, // De 5: próx=4, ant=1
+    {0,  0,  1,  0, -1,  0,  0,  0}, // De 6: próx=2, ant=4
+    {0,  0,  0,  0,  0,  0,  0,  0}  // De 7
 };
 
 /* ========== PUBLIC FUNCTIONS ========== */
@@ -67,74 +54,57 @@ void Hall_Init(HallSensor_t* hall) {
     hall->hall_capture = 0;
     hall->last_capture = 0;
     hall->new_capture_flag = 0;
-    hall->isr_counter = 0;  // DEBUG: inicializar contador
+    hall->isr_counter = 0;
     
-    // Leitura inicial do estado Hall
     hall->hall_state = Hall_ReadState();
     hall->last_hall_state = hall->hall_state;
     
-    // Setar ângulo inicial baseado no estado Hall atual
     if (hall->hall_state >= 1 && hall->hall_state <= 6) {
         hall->angle_electrical = HALL_ANGLE_TABLE[hall->hall_state];
     }
     
-    // Iniciar TIM8 em modo Hall Sensor com interrupção
     HAL_TIMEx_HallSensor_Start_IT(&htim8);
 }
 
 uint8_t Hall_ReadState(void) {
     uint8_t state = 0;
-    
-    // Ler os 3 pinos Hall (PB6, PB8, PB9)
-    // IMPORTANTE: Como estão em modo AF (TIM8), ler direto do registrador IDR
-    if (GPIOB->IDR & HALL_A_Pin) state |= 0x01; // Bit 0
-    if (GPIOB->IDR & HALL_B_Pin) state |= 0x02; // Bit 1
-    if (GPIOB->IDR & HALL_C_Pin) state |= 0x04; // Bit 2
-    
+    if (GPIOB->IDR & HALL_A_Pin) state |= 0x01;
+    if (GPIOB->IDR & HALL_B_Pin) state |= 0x02;
+    if (GPIOB->IDR & HALL_C_Pin) state |= 0x04;
     return state;
 }
 
 void Hall_ProcessData(HallSensor_t* hall) {
-    // Processar apenas se houver nova captura
-    if (!hall->new_capture_flag) {
-        return;
-    }
+    if (!hall->new_capture_flag) return;
+    hall->new_capture_flag = 0;
     
-    hall->new_capture_flag = 0; // Limpar flag
-    
-    // Calcular velocidade baseado no valor do contador capturado
-    // IMPORTANTE: Em modo Hall Sensor (Slave Reset Mode), o TIM8 reseta o contador
-    // a cada transição Hall, então hall->hall_capture JÁ É o período entre transições!
     uint32_t period_us = hall->hall_capture;
     
-    if (period_us > 100 && period_us < 1000000) { // Entre 100μs e 1s (válido: 10 a 10000 RPM)
-        // Timer roda a 1MHz (1μs por tick)
-        // Cada transição Hall = 60° elétrico = 1/6 rotação elétrica
+    // Calcular velocidade (válido: 100μs a 1s = 10 a 10000 RPM)
+    if (period_us > 100 && period_us < 1000000) {
         float time_seconds = period_us / 1000000.0f;
-        float electrical_rps = (1.0f / 6.0f) / time_seconds;
-        hall->velocity_erpm = electrical_rps * 60.0f; // Converter para eRPM
+        float electrical_rps = (1.0f / 6.0f) / time_seconds; // 1/6 rotação por transição
+        hall->velocity_erpm = electrical_rps * 60.0f;
     } else {
-        hall->velocity_erpm = 0.0f; // Timeout ou primeira leitura
+        hall->velocity_erpm = 0.0f;
     }
     
-    // Salvar último valor capturado (para debug/histórico)
     hall->last_capture = hall->hall_capture;
     
-    // Verificar direção baseado na transição
+    // Detectar direção e contar rotações
     uint8_t new_state = hall->hall_state;
     
     if (new_state != hall->last_hall_state && new_state >= 1 && new_state <= 6) {
         int8_t transition = HALL_TRANSITION_TABLE[hall->last_hall_state][new_state];
         
         if (transition != 0) {
-            // Transição válida
-            hall->direction = (transition > 0) ? 1 : 2;
+            hall->direction = (transition > 0) ? 1 : 2;  // +1=horário, -1=anti-horário
             
-            // Atualizar contador de rotações
+            // Detecta quando completa uma rotação elétrica
             if (hall->last_hall_state == 6 && new_state == 1) {
-                hall->electrical_rotations++; // Completou rotação horária
+                hall->electrical_rotations++;  // Horário
             } else if (hall->last_hall_state == 1 && new_state == 6) {
-                hall->electrical_rotations--; // Completou rotação anti-horária
+                hall->electrical_rotations--;  // Anti-horário
             }
         }
         
@@ -148,21 +118,9 @@ void Hall_ProcessData(HallSensor_t* hall) {
 }
 
 void Hall_TIM_CaptureCallback(HallSensor_t* hall) {
-    // ===== ISR ULTRA RÁPIDA (executada a cada transição Hall) =====
-    // Objetivo: capturar dados e sair imediatamente (~1-2μs)
-    
-    // 1. Capturar valor do contador do TIM8 ANTES de resetar
-    //    IMPORTANTE: Em modo Hall Sensor, o contador reseta automaticamente
-    //    após a captura, então este valor É o período entre transições!
     hall->hall_capture = __HAL_TIM_GET_COUNTER(&htim8);
-    
-    // 2. Ler estado Hall atual
     hall->hall_state = Hall_ReadState();
-    
-    // 3. Setar flag para processar no main loop
     hall->new_capture_flag = 1;
-    
-    // FIM da ISR! Processamento pesado vai no main loop
 }
 
 float Hall_GetAngle(HallSensor_t* hall) {
@@ -171,4 +129,8 @@ float Hall_GetAngle(HallSensor_t* hall) {
 
 float Hall_GetVelocity(HallSensor_t* hall) {
     return hall->velocity_erpm;
+}
+
+uint8_t Hall_GetSector(HallSensor_t* hall) {
+    return HALL_STATE_TO_SECTOR[hall->hall_state];
 }

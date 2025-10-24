@@ -13,45 +13,28 @@
 
 /* ========== TELEMETRY STRUCTURE ========== */
 typedef struct {
-    // Hall sensor
-    uint8_t hall_state;
+    uint8_t hall_state;      // Estado físico do Hall (1-7)
+    uint8_t hall_sector;     // Setor lógico (1-6)
     float   hall_angle;
     float   hall_velocity;
-    uint32_t isr_counter;  // DEBUG: contador de ISR
-    
-    // Estado
+    uint32_t isr_counter;
     uint32_t uptime_ms;
     uint8_t  errors;
 } Telemetry_t;
 
-/* ========== PUBLIC FUNCTIONS ========== */
-
-/**
- * @brief Inicializa o módulo de comunicação USB
- */
+// Inicializa o módulo de comunicação USB
 void USB_Comm_Init(void);
 
-/**
- * @brief Envia telemetria via USB CDC
- * @param telem Ponteiro para estrutura de telemetria
- */
+// Envia telemetria via USB CDC
 void USB_Comm_SendTelemetry(Telemetry_t* telem);
 
-/**
- * @brief Envia string de debug via USB CDC
- * @param str String a ser enviada (deve terminar com \0)
- */
+// Envia string de debug via USB CDC
 void USB_Comm_Print(const char* str);
 
-/**
- * @brief Printf formatado via USB CDC
- * @note Usar com cuidado (pode ser lento)
- */
+// Printf formatado via USB CDC (usar com cuidado - pode ser lento)
 void USB_Comm_Printf(const char* fmt, ...);
 
-/**
- * @brief Processa comandos recebidos via USB (chamado no loop principal)
- */
+// Processa comandos recebidos via USB (chamar no loop principal)
 void USB_Comm_ProcessCommands(void);
 
 #endif /* INC_USB_COMMUNICATION_H_ */

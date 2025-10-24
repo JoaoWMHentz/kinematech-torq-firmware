@@ -29,39 +29,25 @@ typedef struct {
 
 /* ========== PUBLIC FUNCTIONS ========== */
 
-/**
- * @brief Inicializa o sensor Hall
- */
+// Inicializa o sensor Hall
 void Hall_Init(HallSensor_t* hall);
 
-/**
- * @brief Lê o estado atual dos sensores Hall
- * @return Estado Hall (0-7), 0 ou 7 = inválido
- */
+// Lê o estado atual dos sensores Hall
 uint8_t Hall_ReadState(void);
 
-/**
- * @brief Processa dados do Hall (ângulo e velocidade)
- * @note Deve ser chamado no main loop (não em ISR!)
- */
+// Processa ângulo e velocidade baseado nos dados capturados
 void Hall_ProcessData(HallSensor_t* hall);
 
-/**
- * @brief Callback ISR do TIM8 Hall Interface (uso interno)
- * @note Chamado automaticamente pela HAL, não chamar manualmente
- */
+// Callback de captura do TIM8
 void Hall_TIM_CaptureCallback(HallSensor_t* hall);
 
-/**
- * @brief Retorna o ângulo elétrico atual (radianos)
- * @return Ângulo entre 0 e 2*PI
- */
+// Retorna o ângulo elétrico atual em radianos
 float Hall_GetAngle(HallSensor_t* hall);
 
-/**
- * @brief Retorna a velocidade em eRPM
- * @return Velocidade elétrica (rotações elétricas por minuto)
- */
+// Retorna a velocidade em eRPM
 float Hall_GetVelocity(HallSensor_t* hall);
+
+// Retorna o setor lógico sequencial (1-6)
+uint8_t Hall_GetSector(HallSensor_t* hall);
 
 #endif /* INC_HALL_SENSOR_H_ */
