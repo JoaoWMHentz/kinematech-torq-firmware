@@ -8,10 +8,40 @@
 
 ### Core Components
 ```
-Core/Src/main.c              → Main loop: Hall_ProcessData() + USB telemetry @ 5Hz
-Core/Src/hall_sensor.c       → TIM8 Hall Interface driver (ISR + state machine)
+Core/Src/main.c              → Main loop: sensor update + driver update
+Core/Inc/Motor/motor.h       → Motor config & state (data container)
+Core/Inc/Drivers/openloop_foc.h → Open-Loop FOC driver (structure only)
+Core/Inc/Sensors/sensor.h    → Generic sensor interface
+Core/Inc/Sensors/hall_sensor.h → Hall sensor (implements sensor.h)
 Core/Src/usb_communication.c → USB CDC telemetry (CSV format)
 Core/Inc/config.h            → Motor params & math constants (6 decimal places)
+```
+
+### Decoupled Architecture
+**Motor** - Pure data container (config + state), no control logic  
+**Sensors** - Implement `Sensor_t` interface (hall_sensor.h, i2c_sensor.h, etc)  
+**Drivers** - Read sensor via `Sensor_t`, write to `motor->state`, control PWM  
+
+**Communication flow:**
+```
+Sensor (reads HW) → Driver (via Sensor_t) → Motor State → Driver (writes PWM)
+```
+
+### Directory Structure
+```
+Core/
+  Inc/
+    Motor/motor.h              - Motor config & state (data only)
+    Drivers/openloop_foc.h     - Open-Loop FOC driver
+    Sensors/
+      sensor.h                 - Generic interface (Sensor_t)
+      hall_sensor.h            - Hall sensor implementation
+      i2c_sensor.h             - I2C sensor template (not implemented)
+  Src/
+    Motor/motor.c
+    Drivers/openloop_foc.c
+    Sensors/
+      hall_sensor.c
 ```
 
 ### Hardware Timers
@@ -80,6 +110,31 @@ volatile uint8_t new_capture_flag;
 3. Initialize in `main()` `/* USER CODE BEGIN 2 */` after HAL_Init()
 4. Process in `while(1)` `/* USER CODE BEGIN 3 */`
 5. Register ISR callbacks in `/* USER CODE BEGIN 4 */` (see `HAL_TIM_IC_CaptureCallback`)
+
+### Adding New Sensor (Pattern)
+1. Create `Core/Inc/Sensors/my_sensor.h` with struct `MySensor_t`
+2. Implement functions: `MySensor_GetAngle()`, `MySensor_GetVelocity()`, etc
+3. Implement `MySensor_CreateSensorInterface()` returning `Sensor_t`:
+```c
+Sensor_t MySensor_CreateSensorInterface(MySensor_t* instance) {
+    Sensor_t sensor;
+    sensor.instance = instance;
+    sensor.get_angle_electrical = (float (*)(void*))MySensor_GetAngle;
+    sensor.get_velocity_erpm = (float (*)(void*))MySensor_GetVelocity;
+    sensor.get_direction = (uint8_t (*)(void*))MySensor_GetDirection;
+    sensor.is_valid = (uint8_t (*)(void*))MySensor_IsValid;
+    return sensor;
+}
+```
+4. Use: `Sensor_t interface = MySensor_CreateSensorInterface(&my_sensor);`
+5. Attach to driver: `OpenLoopFOC_AttachSensor(&driver, &interface);`
+
+### Adding New Driver (Pattern)
+1. Create `Core/Inc/Drivers/my_driver.h` with struct `MyDriver_t`
+2. Include reference to `Motor_t* motor` and `Sensor_t* sensor`
+3. Implement: `MyDriver_Init()`, `MyDriver_Enable()`, `MyDriver_Update()`
+4. Driver reads sensor via `sensor->get_angle_electrical(sensor->instance)`
+5. Driver writes to `motor->state.voltage_q`, `motor->state.angle_electrical`, etc
 
 ## Motor Control Specifics
 

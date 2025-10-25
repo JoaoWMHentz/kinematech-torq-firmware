@@ -26,8 +26,11 @@
 /* USER CODE BEGIN Includes */
 #include "config.h"
 #include "usb_communication.h"
+#include "Sensors/hall_sensor.h"
+#include "Sensors/sensor.h"
+#include "Motor/motor.h"
+#include "Drivers/openloop_foc.h"
 #include <stdio.h>
-#include <Sensors/hall_sensor.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,8 +51,17 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-// Instâncias globais dos módulos
+// Motor (configuração e estado)
+Motor_t motor;
+
+// Sensor Hall
 HallSensor_t hall_sensor;
+Sensor_t sensor_interface;
+
+// Driver FOC
+OpenLoopFOC_t foc_driver;
+
+// Telemetria
 Telemetry_t telemetry;
 
 // Controle de timing
@@ -105,47 +117,80 @@ int main(void)
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
 
-	// Delay para estabilização USB
-	HAL_Delay(500);
+  // Delay para estabilização USB
+  HAL_Delay (500);
 
-	// Inicializar módulos
-	USB_Comm_Init();
-	Hall_Init(&hall_sensor);
+  // Inicializar comunicação USB
+  USB_Comm_Init ();
 
-	USB_Comm_Print("\r\n=== KINEMATECH TORQ ESC ===\r\n");
-	USB_Comm_Print("Firmware v0.1 - Oct 2025\r\n");
-	USB_Comm_Print("Hall Sensor ready. Rotate motor to test.\r\n\r\n");
-	HAL_GPIO_TogglePin(LED_BLUE_GPIO_Port, LED_BLUE_Pin); // deixa aqui
+  // Configurar motor
+  MotorConfig_t motor_config = {
+      .pole_pairs = MOTOR_POLE_PAIRS,
+      .kv_rating = 190.0f,
+      .phase_resistance = 0.045f,
+      .phase_inductance = 0.000020f,
+      .voltage_limit = 12.0f,
+      .current_limit = 30.0f,
+      .velocity_limit_rpm = 3000.0f
+  };
+  Motor_Init (&motor, &motor_config);
+
+  // Inicializar sensor Hall e criar interface
+  Hall_Init (&hall_sensor);
+  sensor_interface = Hall_CreateSensorInterface (&hall_sensor);
+
+  // Configurar e inicializar driver Open-Loop FOC
+  OpenLoopFOC_Config_t foc_config = {
+      .htim = &htim1,
+      .max_voltage = 12.0f,
+      .ramp_rate = 5.0f  // 5V/s de rampa
+  };
+  OpenLoopFOC_Init (&foc_driver, &foc_config, &motor);
+  OpenLoopFOC_AttachSensor (&foc_driver, &sensor_interface);
+
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+  HAL_TIM_Base_Start_IT(&htim1);  // Habilita interrupção Update @ 20kHz
+
+  USB_Comm_Print ("\r\n=== KINEMATECH TORQ ESC ===\r\n");
+  USB_Comm_Print ("Firmware v0.1 - Oct 2025\r\n");
+  USB_Comm_Print ("Hall Sensor ready. Rotate motor to test.\r\n\r\n");
+  HAL_GPIO_TogglePin (LED_BLUE_GPIO_Port, LED_BLUE_Pin);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	while (1) {
+  while (1)
+    {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
 
-		// ===== PROCESSAR DADOS DO HALL (main loop) =====
-		Hall_ProcessData(&hall_sensor);
+      // ===== PROCESSAR DADOS DO HALL (main loop) =====
+      Hall_ProcessData (&hall_sensor);
 
-		// ===== TELEMETRIA VIA USB (100Hz) =====
-		uint32_t current_time = HAL_GetTick();
-		if (current_time - last_telemetry_ms >= (1000 / TELEMETRY_RATE_HZ)) {
-			last_telemetry_ms = current_time;
+      // ===== TELEMETRIA VIA USB (100Hz) =====
+      uint32_t current_time = HAL_GetTick ();
+      if (current_time - last_telemetry_ms >= (1000 / TELEMETRY_RATE_HZ))
+	{
+	  last_telemetry_ms = current_time;
 
-		telemetry.hall_state = hall_sensor.hall_state;
-		telemetry.hall_angle = Hall_GetAngle(&hall_sensor);
-		telemetry.hall_velocity = Hall_GetVelocity(&hall_sensor);
-		telemetry.isr_counter = hall_sensor.isr_counter;
-		telemetry.uptime_ms = current_time;
-		telemetry.errors = 0;
+	  // Preencher telemetria usando sensor diretamente
+	  telemetry.hall_state = hall_sensor.hall_state;
+	  telemetry.hall_sector = Hall_GetSector(&hall_sensor);
+	  telemetry.hall_angle = sensor_interface.get_angle_electrical(sensor_interface.instance);
+	  telemetry.hall_velocity = Hall_GetMechanicalVelocity(&hall_sensor);  // RPM mecânico
+	  telemetry.isr_counter = hall_sensor.isr_counter;
+	  telemetry.uptime_ms = current_time;
+	  telemetry.errors = 0;
 
-			USB_Comm_SendTelemetry(&telemetry);
-		}
-
-		// Sleep até próxima interrupção (economia de energia)
-		__WFI();
+	  USB_Comm_SendTelemetry (&telemetry);
 	}
+
+      // Sleep até próxima interrupção (economia de energia)
+      __WFI();
+    }
   /* USER CODE END 3 */
 }
 
@@ -202,11 +247,8 @@ void SystemClock_Config(void)
 static void MX_NVIC_Init(void)
 {
   /* USB_LP_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USB_LP_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(USB_LP_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(USB_LP_IRQn);
-  /* TIM8_CC_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(TIM8_CC_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(TIM8_CC_IRQn);
 }
 
 /* USER CODE BEGIN 4 */
@@ -218,11 +260,13 @@ extern HallSensor_t hall_sensor;
  * @brief Callback do TIM8 Hall Sensor Interface
  * @note Chamada automaticamente pela HAL a cada transição Hall
  */
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
-	if (htim->Instance == TIM8) {
-		hall_sensor.isr_counter++;
-		Hall_TIM_CaptureCallback(&hall_sensor);
-	}
+void HAL_TIM_IC_CaptureCallback (TIM_HandleTypeDef *htim)
+{
+  if (htim->Instance == TIM8)
+    {
+      hall_sensor.isr_counter++;
+      Hall_TIM_CaptureCallback (&hall_sensor);
+    }
 }
 
 /* USER CODE END 4 */
@@ -238,7 +282,14 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
   /* USER CODE BEGIN Callback 0 */
-
+  extern OpenLoopFOC_t foc_driver;
+  
+  // TIM1 Update @ 20kHz - FOC Loop (prioridade 0)
+  if (htim->Instance == TIM1)
+  {
+    OpenLoopFOC_TIM_Callback(&foc_driver);
+    return;
+  }
   /* USER CODE END Callback 0 */
   if (htim->Instance == TIM2)
   {
@@ -256,10 +307,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	__disable_irq();
-	while (1) {
-	}
+  /* User can add his own implementation to report the HAL error return state */
+  __disable_irq ();
+  while (1)
+    {
+    }
   /* USER CODE END Error_Handler_Debug */
 }
 #ifdef USE_FULL_ASSERT

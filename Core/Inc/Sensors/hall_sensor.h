@@ -25,6 +25,7 @@ typedef struct {
     float   angle_electrical;             // Ângulo elétrico estimado (0 a 2π)
     float   velocity_erpm;                // Velocidade elétrica (eRPM)
     uint8_t direction;                    // Direção: 0=parado, 1=horário, 2=anti-horário
+    uint32_t last_update_time;            // Timestamp da última captura válida (ms)
 } HallSensor_t;
 
 /* ========== PUBLIC FUNCTIONS ========== */
@@ -47,7 +48,23 @@ float Hall_GetAngle(HallSensor_t* hall);
 // Retorna a velocidade em eRPM
 float Hall_GetVelocity(HallSensor_t* hall);
 
+// Retorna a velocidade mecânica real em RPM
+float Hall_GetMechanicalVelocity(HallSensor_t* hall);
+
 // Retorna o setor lógico sequencial (1-6)
 uint8_t Hall_GetSector(HallSensor_t* hall);
+
+// Retorna direção (0=parado, 1=CW, 2=CCW)
+uint8_t Hall_GetDirection(HallSensor_t* hall);
+
+// Verifica se sensor está em estado válido
+uint8_t Hall_IsValid(HallSensor_t* hall);
+
+/* ========== SENSOR INTERFACE ========== */
+
+// Criar interface Sensor_t para este Hall Sensor
+// Permite uso com drivers genéricos
+#include "Sensors/sensor.h"
+Sensor_t Hall_CreateSensorInterface(HallSensor_t* hall);
 
 #endif /* INC_SENSORS_HALL_SENSOR_H_ */

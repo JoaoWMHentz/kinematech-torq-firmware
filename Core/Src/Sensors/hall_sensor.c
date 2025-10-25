@@ -9,6 +9,9 @@
 #include "config.h"
 #include "tim.h"
 
+// Timeout para considerar motor parado (ms)
+
+
 // Mapeamento de estado físico → setor lógico (1-6)
 // Sequência física: 1→5→4→6→2→3→1
 // Sequência lógica: 1→2→3→4→5→6→1
@@ -55,6 +58,7 @@ void Hall_Init(HallSensor_t* hall) {
     hall->last_capture = 0;
     hall->new_capture_flag = 0;
     hall->isr_counter = 0;
+    hall->last_update_time = 0;
     
     hall->hall_state = Hall_ReadState();
     hall->last_hall_state = hall->hall_state;
@@ -67,14 +71,29 @@ void Hall_Init(HallSensor_t* hall) {
 }
 
 uint8_t Hall_ReadState(void) {
+    // Ler estado Hall diretamente do registrador GPIOB->IDR
+    // TIM8 Hall Interface usa os pinos em modo AF, mas IDR ainda reflete o estado físico
+    uint32_t idr = GPIOB->IDR;
     uint8_t state = 0;
-    if (GPIOB->IDR & HALL_A_Pin) state |= 0x01;
-    if (GPIOB->IDR & HALL_B_Pin) state |= 0x02;
-    if (GPIOB->IDR & HALL_C_Pin) state |= 0x04;
+    
+    // PB6 (HALL_A) → bit 0
+    if (idr & GPIO_PIN_6) state |= 0x01;
+    // PB8 (HALL_B) → bit 1
+    if (idr & GPIO_PIN_8) state |= 0x02;
+    // PB9 (HALL_C) → bit 2
+    if (idr & GPIO_PIN_9) state |= 0x04;
+    
     return state;
 }
 
 void Hall_ProcessData(HallSensor_t* hall) {
+    // Verificar timeout: se passou muito tempo sem transição, motor parou
+    uint32_t current_time = HAL_GetTick();
+    if (current_time - hall->last_update_time > HALL_VELOCITY_TIMEOUT_MS) {
+        hall->velocity_erpm = 0.0f;
+        hall->direction = 0;
+    }
+    
     if (!hall->new_capture_flag) return;
     hall->new_capture_flag = 0;
     
@@ -85,6 +104,7 @@ void Hall_ProcessData(HallSensor_t* hall) {
         float time_seconds = period_us / 1000000.0f;
         float electrical_rps = (1.0f / 6.0f) / time_seconds; // 1/6 rotação por transição
         hall->velocity_erpm = electrical_rps * 60.0f;
+        hall->last_update_time = current_time;  // Atualizar timestamp
     } else {
         hall->velocity_erpm = 0.0f;
     }
@@ -118,7 +138,8 @@ void Hall_ProcessData(HallSensor_t* hall) {
 }
 
 void Hall_TIM_CaptureCallback(HallSensor_t* hall) {
-    hall->hall_capture = __HAL_TIM_GET_COUNTER(&htim8);
+    hall->hall_capture = HAL_TIM_ReadCapturedValue(&htim8, TIM_CHANNEL_1);
+    
     hall->hall_state = Hall_ReadState();
     hall->new_capture_flag = 1;
 }
@@ -131,6 +152,32 @@ float Hall_GetVelocity(HallSensor_t* hall) {
     return hall->velocity_erpm;
 }
 
+float Hall_GetMechanicalVelocity(HallSensor_t* hall) {
+    // Converte eRPM para RPM mecânico
+    // RPM_mecânico = eRPM / número_de_pares_de_polos
+    return hall->velocity_erpm / (float)MOTOR_POLE_PAIRS;
+}
+
 uint8_t Hall_GetSector(HallSensor_t* hall) {
     return HALL_STATE_TO_SECTOR[hall->hall_state];
+}
+
+uint8_t Hall_GetDirection(HallSensor_t* hall) {
+    return hall->direction;
+}
+
+uint8_t Hall_IsValid(HallSensor_t* hall) {
+    return (hall->hall_state >= 1 && hall->hall_state <= 6);
+}
+
+/* ========== SENSOR INTERFACE IMPLEMENTATION ========== */
+
+Sensor_t Hall_CreateSensorInterface(HallSensor_t* hall) {
+    Sensor_t sensor;
+    sensor.instance = hall;
+    sensor.get_angle_electrical = (float (*)(void*))Hall_GetAngle;
+    sensor.get_velocity_erpm = (float (*)(void*))Hall_GetVelocity;
+    sensor.get_direction = (uint8_t (*)(void*))Hall_GetDirection;
+    sensor.is_valid = (uint8_t (*)(void*))Hall_IsValid;
+    return sensor;
 }

@@ -23,12 +23,13 @@ void USB_Comm_Init(void) {
 }
 
 void USB_Comm_SendTelemetry(Telemetry_t* telem) {
-    int32_t vel_int = (int32_t)(telem->hall_velocity * 10.0f);
+    int32_t vel_int = (int32_t)(telem->hall_velocity);
+    int32_t angle_deg = (int32_t)(telem->hall_angle * RAD_TO_DEG); // rad→deg
     
     snprintf(usb_tx_buffer, sizeof(usb_tx_buffer),
-             "H:%d,Ang:%d,Vel:%ld,ISR:%lu,Time:%lu\r\n",
+             "H:%1d | Ang:%3ld | Vel:%5ld | ISR:%6lu | Time:%7lu\r\n",
              telem->hall_sector,
-             telem->hall_sector,
+             angle_deg,
              vel_int,
              telem->isr_counter,
              telem->uptime_ms);

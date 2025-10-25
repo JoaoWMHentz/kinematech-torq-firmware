@@ -11,7 +11,8 @@
 #include "main.h"
 
 /* ========== MOTOR PARAMETERS ========== */
-#define MOTOR_POLE_PAIRS 7
+#define MOTOR_POLE_PAIRS 15
+#define HALL_VELOCITY_TIMEOUT_MS  100
 
 /* ========== MATH CONSTANTS ========== */
 #define PI               3.141593f    // π
@@ -23,10 +24,10 @@
 #define FOUR_PI_DIV_3    4.188790f    // 4π/3 (240°)
 #define FIVE_PI_DIV_3    5.235988f    // 5π/3 (300°)
 #define FIVE_PI_DIV_6    2.617994f    // 5π/6 (150°)
-
+#define RAD_TO_DEG 	 57.295779f
 /* ========== CONTROL LOOP TIMING ========== */
 #define FOC_LOOP_FREQUENCY_HZ   20000  // 20kHz - Loop de controle FOC
-#define TELEMETRY_RATE_HZ       5    // 100Hz - Taxa de envio USB
+#define TELEMETRY_RATE_HZ       20    // 100Hz - Taxa de envio USB
 
 /* ========== CURRENT SENSING (INA240) ========== */
 #define CURRENT_SENSE_GAIN      20.0f  // Ganho do INA240 (V/V)
