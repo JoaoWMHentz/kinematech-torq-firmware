@@ -148,9 +148,16 @@ int main(void)
   OpenLoopFOC_Init (&foc_driver, &foc_config, &motor);
   OpenLoopFOC_AttachSensor (&foc_driver, &sensor_interface);
 
+  // Iniciar PWM complementar (CH + CHN) nos 3 canais
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);  // Canal complementar CH1N
+  
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_2);  // Canal complementar CH2N
+  
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
+  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);  // Canal complementar CH3N
+  
   HAL_TIM_Base_Start_IT(&htim1);  // Habilita interrupção Update @ 20kHz
 
   USB_Comm_Print ("\r\n=== KINEMATECH TORQ ESC ===\r\n");
@@ -247,7 +254,7 @@ void SystemClock_Config(void)
 static void MX_NVIC_Init(void)
 {
   /* USB_LP_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(USB_LP_IRQn, 2, 0);
+  HAL_NVIC_SetPriority(USB_LP_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(USB_LP_IRQn);
 }
 
